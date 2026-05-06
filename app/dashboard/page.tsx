@@ -6,10 +6,11 @@ import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Users, DollarSign, TrendingUp, Plus, Clock } from 'lucide-react';
+import { Calendar, Users, DollarSign, TrendingUp, Plus, Clock, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { establishmentApi, appointmentsApi } from '@/lib/api';
 import type { Appointment, AppointmentStatus } from '@/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const statusColors: Record<AppointmentStatus, string> = {
   PENDING: 'bg-warning/10 text-warning border-warning/20',
@@ -27,18 +28,73 @@ const statusLabels: Record<AppointmentStatus, string> = {
   NO_SHOW: 'Não compareceu',
 };
 
+// Safe fetcher that handles API errors gracefully
+const establishmentFetcher = async () => {
+  const res = await establishmentApi.get();
+  if (!res.success) {
+    console.log('[v0] Establishment API error:', res.error);
+    return null;
+  }
+  return res.data;
+};
+
+const appointmentsFetcher = async (key: [string, string]) => {
+  const [, date] = key;
+  const res = await appointmentsApi.list({ startDate: date, endDate: date, limit: 100 });
+  if (!res.success) {
+    console.log('[v0] Appointments API error:', res.error);
+    return [];
+  }
+  return res.data || [];
+};
+
 export default function DashboardPage() {
-  const { data: establishmentData } = useSWR('establishment', () =>
-    establishmentApi.get().then((res) => res.data)
+  const { data: establishmentData, error: establishmentError, isLoading: isLoadingEstablishment } = useSWR(
+    'establishment',
+    establishmentFetcher,
+    { 
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
   );
 
   const today = format(new Date(), 'yyyy-MM-dd');
-  const { data: appointmentsData } = useSWR(['appointments', today], () =>
-    appointmentsApi.list({ startDate: today, endDate: today, limit: 100 }).then((res) => res.data)
+  const { data: appointmentsData, error: appointmentsError, isLoading: isLoadingAppointments } = useSWR(
+    ['appointments', today],
+    appointmentsFetcher,
+    { 
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
   );
 
-  const todayAppointments = appointmentsData || [];
+  const isLoading = isLoadingEstablishment || isLoadingAppointments;
+  const hasError = establishmentError || appointmentsError;
+
+  const todayAppointments = Array.isArray(appointmentsData) ? appointmentsData : [];
   const stats = establishmentData?._count;
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show error state if API fails
+  if (hasError) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Erro ao carregar dados</AlertTitle>
+        <AlertDescription>
+          Não foi possível carregar os dados do dashboard. Por favor, tente novamente mais tarde.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">
