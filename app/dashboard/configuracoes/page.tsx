@@ -43,8 +43,6 @@ const establishmentFetcher = async () => {
   return res.data;
 };
 
-type EstablishmentFormData = z.infer<typeof establishmentSchema>;
-
 const daysOfWeek = [
   { key: 'monday', label: 'Segunda-feira' },
   { key: 'tuesday', label: 'Terça-feira' },
@@ -99,7 +97,22 @@ export default function ConfiguracoesPage() {
         zipCode: establishment.zipCode || '',
         slotDuration: establishment.slotDuration,
       });
-      setWorkingHours(establishment.workingHours || {});
+      // Initialize working hours from API or with defaults (all closed)
+      const defaultHours: WorkingHours = {};
+      daysOfWeek.forEach(day => {
+        defaultHours[day.key] = { isOpen: false, openTime: '09:00', closeTime: '18:00' };
+      });
+      const apiWorkingHours = establishment.workingHours || {};
+      // Merge API data with defaults
+      const mergedHours: WorkingHours = { ...defaultHours };
+      Object.keys(apiWorkingHours).forEach(key => {
+        if (apiWorkingHours[key]) {
+          mergedHours[key] = apiWorkingHours[key];
+        }
+      });
+      console.log('[v0] workingHours from API:', apiWorkingHours);
+      console.log('[v0] merged workingHours:', mergedHours);
+      setWorkingHours(mergedHours);
     }
   }, [establishment, reset]);
 
@@ -117,10 +130,15 @@ export default function ConfiguracoesPage() {
   const onSubmit = async (data: EstablishmentFormData) => {
     setIsLoading(true);
     try {
+      console.log('[v0] Saving establishment data:', data);
+      console.log('[v0] Saving workingHours:', workingHours);
+      
       const result = await establishmentApi.update({
         ...data,
         workingHours,
       });
+
+      console.log('[v0] Update result:', result);
 
       if (result.success) {
         toast.success('Configurações salvas!');
@@ -128,7 +146,8 @@ export default function ConfiguracoesPage() {
       } else {
         toast.error(result.error || 'Erro ao salvar configurações');
       }
-    } catch {
+    } catch (err) {
+      console.error('[v0] Update error:', err);
       toast.error('Erro ao salvar configurações');
     } finally {
       setIsLoading(false);
