@@ -83,6 +83,11 @@ async function handleProxy(
     });
 
     const data = await response.json();
+    
+    // Log errors from backend for debugging
+    if (!response.ok) {
+      console.log('[v0] Backend error:', response.status, data);
+    }
 
     return NextResponse.json(data, {
       status: response.status,
@@ -90,7 +95,7 @@ async function handleProxy(
   } catch (error) {
     console.error('[v0] Proxy error:', error);
     return NextResponse.json(
-      { error: 'Erro ao conectar com o servidor' },
+      { success: false, error: 'Erro ao conectar com o servidor' },
       { status: 500 }
     );
   }

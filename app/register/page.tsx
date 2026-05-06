@@ -56,9 +56,13 @@ export default function RegisterPage() {
         toast.success('Conta criada com sucesso!');
         router.push('/dashboard');
       } else {
-        toast.error(result.error || 'Erro ao criar conta');
+        // Show detailed error message
+        const errorMessage = result.error || 'Erro ao criar conta';
+        toast.error(errorMessage);
+        console.error('[v0] Registration failed:', errorMessage);
       }
-    } catch {
+    } catch (error) {
+      console.error('[v0] Registration error:', error);
       toast.error('Erro ao criar conta. Tente novamente.');
     } finally {
       setIsLoading(false);
