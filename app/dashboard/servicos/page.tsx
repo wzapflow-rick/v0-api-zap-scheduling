@@ -60,6 +60,20 @@ export default function ServicosPage() {
 
   const services = Array.isArray(servicesData) ? servicesData : [];
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<ServiceFormData>({
+    resolver: zodResolver(serviceSchema),
+    defaultValues: { active: true, duration: 30, price: 0 },
+  });
+
+  const isActive = watch('active');
+
   // Show loading state
   if (isLoadingData) {
     return (
@@ -81,20 +95,6 @@ export default function ServicosPage() {
       </Alert>
     );
   }
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<ServiceFormData>({
-    resolver: zodResolver(serviceSchema),
-    defaultValues: { active: true, duration: 30, price: 0 },
-  });
-
-  const isActive = watch('active');
 
   const openCreateForm = () => {
     setEditingService(null);

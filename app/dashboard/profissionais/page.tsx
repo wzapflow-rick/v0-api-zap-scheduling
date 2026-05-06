@@ -62,6 +62,20 @@ export default function ProfissionaisPage() {
 
   const professionals = Array.isArray(professionalsData) ? professionalsData : [];
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<ProfessionalFormData>({
+    resolver: zodResolver(professionalSchema),
+    defaultValues: { active: true },
+  });
+
+  const isActive = watch('active');
+
   // Show loading state
   if (isLoadingData) {
     return (
@@ -83,20 +97,6 @@ export default function ProfissionaisPage() {
       </Alert>
     );
   }
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<ProfessionalFormData>({
-    resolver: zodResolver(professionalSchema),
-    defaultValues: { active: true },
-  });
-
-  const isActive = watch('active');
 
   const openCreateForm = () => {
     setEditingProfessional(null);

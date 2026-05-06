@@ -59,6 +59,15 @@ export default function ClientesPage() {
 
   const clients = Array.isArray(clientsData) ? clientsData : [];
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ClientFormData>({
+    resolver: zodResolver(clientSchema),
+  });
+
   // Show loading state
   if (isLoadingData) {
     return (
@@ -80,15 +89,6 @@ export default function ClientesPage() {
       </Alert>
     );
   }
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<ClientFormData>({
-    resolver: zodResolver(clientSchema),
-  });
 
   const openCreateForm = () => {
     setEditingClient(null);
