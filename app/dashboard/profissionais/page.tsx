@@ -38,11 +38,15 @@ type ProfessionalFormData = z.infer<typeof professionalSchema>;
 const professionalsFetcher = async (key: [string, string]) => {
   const [, search] = key;
   const res = await professionalsApi.list({ search, limit: 100 });
+  console.log('[v0] Professionals fetch response:', res);
   if (!res.success) {
     console.log('[v0] Professionals API error:', res.error);
     return [];
   }
-  return res.data || [];
+  // Handle both array directly and wrapped in data property
+  const data = Array.isArray(res.data) ? res.data : (res as any).data || [];
+  console.log('[v0] Professionals data:', data);
+  return data;
 };
 
 export default function ProfissionaisPage() {
