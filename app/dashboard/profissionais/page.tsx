@@ -16,12 +16,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Search, Pencil, Trash2, Briefcase, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Briefcase, Loader2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { professionalsApi } from '@/lib/api';
 import type { Professional } from '@/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const professionalSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -33,18 +34,55 @@ const professionalSchema = z.object({
 
 type ProfessionalFormData = z.infer<typeof professionalSchema>;
 
+// Safe fetcher that handles API errors gracefully
+const professionalsFetcher = async (key: [string, string]) => {
+  const [, search] = key;
+  const res = await professionalsApi.list({ search, limit: 100 });
+  if (!res.success) {
+    console.log('[v0] Professionals API error:', res.error);
+    return [];
+  }
+  return res.data || [];
+};
+
 export default function ProfissionaisPage() {
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: professionalsData, mutate } = useSWR(
+  const { data: professionalsData, error, isLoading: isLoadingData, mutate } = useSWR(
     ['professionals', search],
-    () => professionalsApi.list({ search, limit: 100 }).then((res) => res.data)
+    professionalsFetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
   );
 
-  const professionals = professionalsData || [];
+  const professionals = Array.isArray(professionalsData) ? professionalsData : [];
+
+  // Show loading state
+  if (isLoadingData) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Erro ao carregar dados</AlertTitle>
+        <AlertDescription>
+          Não foi possível carregar os profissionais. Por favor, tente novamente mais tarde.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   const {
     register,

@@ -13,12 +13,13 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Search, Pencil, Trash2, Scissors, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Scissors, Loader2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { servicesApi } from '@/lib/api';
 import type { Service } from '@/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const serviceSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -31,18 +32,55 @@ const serviceSchema = z.object({
 
 type ServiceFormData = z.infer<typeof serviceSchema>;
 
+// Safe fetcher that handles API errors gracefully
+const servicesFetcher = async (key: [string, string]) => {
+  const [, search] = key;
+  const res = await servicesApi.list({ search, limit: 100 });
+  if (!res.success) {
+    console.log('[v0] Services API error:', res.error);
+    return [];
+  }
+  return res.data || [];
+};
+
 export default function ServicosPage() {
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: servicesData, mutate } = useSWR(
+  const { data: servicesData, error, isLoading: isLoadingData, mutate } = useSWR(
     ['services', search],
-    () => servicesApi.list({ search, limit: 100 }).then((res) => res.data)
+    servicesFetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
   );
 
-  const services = servicesData || [];
+  const services = Array.isArray(servicesData) ? servicesData : [];
+
+  // Show loading state
+  if (isLoadingData) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Erro ao carregar dados</AlertTitle>
+        <AlertDescription>
+          Não foi possível carregar os serviços. Por favor, tente novamente mais tarde.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   const {
     register,

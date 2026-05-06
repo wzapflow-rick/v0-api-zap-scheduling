@@ -14,9 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Building2, Clock, Globe, Copy, Check } from 'lucide-react';
+import { Loader2, Building2, Clock, Globe, Copy, Check, AlertCircle } from 'lucide-react';
 import { establishmentApi } from '@/lib/api';
 import type { Establishment, WorkingHours } from '@/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const establishmentSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -29,6 +30,18 @@ const establishmentSchema = z.object({
   zipCode: z.string().optional(),
   slotDuration: z.coerce.number().min(5, 'Duração mínima de 5 minutos'),
 });
+
+type EstablishmentFormData = z.infer<typeof establishmentSchema>;
+
+// Safe fetcher that handles API errors gracefully
+const establishmentFetcher = async () => {
+  const res = await establishmentApi.get();
+  if (!res.success) {
+    console.log('[v0] Establishment API error:', res.error);
+    return null;
+  }
+  return res.data;
+};
 
 type EstablishmentFormData = z.infer<typeof establishmentSchema>;
 
@@ -53,8 +66,13 @@ export default function ConfiguracoesPage() {
   const [copied, setCopied] = useState(false);
   const [workingHours, setWorkingHours] = useState<WorkingHours>({});
 
-  const { data: establishmentData, mutate } = useSWR('establishment', () =>
-    establishmentApi.get().then((res) => res.data)
+  const { data: establishmentData, error, isLoading: isLoadingData, mutate } = useSWR(
+    'establishment',
+    establishmentFetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
   );
 
   const establishment = establishmentData;
@@ -126,6 +144,28 @@ export default function ConfiguracoesPage() {
       },
     }));
   };
+
+  // Show loading state
+  if (isLoadingData) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Erro ao carregar dados</AlertTitle>
+        <AlertDescription>
+          Não foi possível carregar as configurações. Por favor, tente novamente mais tarde.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">

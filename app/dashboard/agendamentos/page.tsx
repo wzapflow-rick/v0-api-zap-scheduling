@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { appointmentsApi, professionalsApi } from '@/lib/api';
 import type { Appointment, AppointmentStatus, Professional } from '@/types';
 import { cn } from '@/lib/utils';
 import { AppointmentForm } from '@/components/dashboard/appointment-form';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const statusColors: Record<AppointmentStatus, string> = {
   PENDING: 'bg-warning text-warning-foreground',
@@ -32,6 +33,32 @@ const statusLabels: Record<AppointmentStatus, string> = {
   NO_SHOW: 'Não compareceu',
 };
 
+// Safe fetchers that handle API errors gracefully
+const appointmentsFetcher = async (key: [string, string, string, string, string]) => {
+  const [, startDate, endDate, professionalFilter, statusFilter] = key;
+  const res = await appointmentsApi.list({
+    startDate,
+    endDate,
+    limit: 500,
+    professionalId: professionalFilter !== 'all' ? professionalFilter : undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+  });
+  if (!res.success) {
+    console.log('[v0] Appointments API error:', res.error);
+    return [];
+  }
+  return res.data || [];
+};
+
+const professionalsFetcher = async () => {
+  const res = await professionalsApi.list({ limit: 100 });
+  if (!res.success) {
+    console.log('[v0] Professionals API error:', res.error);
+    return [];
+  }
+  return res.data || [];
+};
+
 export default function AgendamentosPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -42,23 +69,29 @@ export default function AgendamentosPage() {
   const startDate = format(startOfMonth(currentDate), 'yyyy-MM-dd');
   const endDate = format(endOfMonth(currentDate), 'yyyy-MM-dd');
 
-  const { data: appointmentsData, mutate } = useSWR(
+  const { data: appointmentsData, error: appointmentsError, isLoading: isLoadingAppointments, mutate } = useSWR(
     ['appointments', startDate, endDate, professionalFilter, statusFilter],
-    () => appointmentsApi.list({
-      startDate,
-      endDate,
-      limit: 500,
-      professionalId: professionalFilter !== 'all' ? professionalFilter : undefined,
-      status: statusFilter !== 'all' ? statusFilter : undefined,
-    }).then((res) => res.data)
+    appointmentsFetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
   );
 
-  const { data: professionalsData } = useSWR('professionals', () =>
-    professionalsApi.list({ limit: 100 }).then((res) => res.data)
+  const { data: professionalsData, error: professionalsError, isLoading: isLoadingProfessionals } = useSWR(
+    'professionals-list',
+    professionalsFetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
   );
 
-  const appointments = appointmentsData || [];
-  const professionals = professionalsData || [];
+  const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
+  const professionals = Array.isArray(professionalsData) ? professionalsData : [];
+
+  const isLoading = isLoadingAppointments || isLoadingProfessionals;
+  const hasError = appointmentsError || professionalsError;
 
   // Generate calendar days
   const calendarDays = useMemo(() => {
@@ -83,6 +116,28 @@ export default function AgendamentosPage() {
   const selectedDayAppointments = selectedDate
     ? appointmentsByDate[format(selectedDate, 'yyyy-MM-dd')] || []
     : [];
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (hasError) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Erro ao carregar dados</AlertTitle>
+        <AlertDescription>
+          Não foi possível carregar os agendamentos. Por favor, tente novamente mais tarde.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">

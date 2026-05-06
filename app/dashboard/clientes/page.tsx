@@ -13,12 +13,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Search, Pencil, Trash2, Users, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Users, Loader2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { clientsApi } from '@/lib/api';
 import type { Client } from '@/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const clientSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -30,18 +31,55 @@ const clientSchema = z.object({
 
 type ClientFormData = z.infer<typeof clientSchema>;
 
+// Safe fetcher that handles API errors gracefully
+const clientsFetcher = async (key: [string, string]) => {
+  const [, search] = key;
+  const res = await clientsApi.list({ search, limit: 100 });
+  if (!res.success) {
+    console.log('[v0] Clients API error:', res.error);
+    return [];
+  }
+  return res.data || [];
+};
+
 export default function ClientesPage() {
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: clientsData, mutate } = useSWR(
+  const { data: clientsData, error, isLoading: isLoadingData, mutate } = useSWR(
     ['clients', search],
-    () => clientsApi.list({ search, limit: 100 }).then((res) => res.data)
+    clientsFetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
   );
 
-  const clients = clientsData || [];
+  const clients = Array.isArray(clientsData) ? clientsData : [];
+
+  // Show loading state
+  if (isLoadingData) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Erro ao carregar dados</AlertTitle>
+        <AlertDescription>
+          Não foi possível carregar os clientes. Por favor, tente novamente mais tarde.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   const {
     register,
