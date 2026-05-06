@@ -22,9 +22,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 // Business hours type matching API
 type BusinessHours = {
   [key: string]: {
-    isOpen: boolean;
-    openTime: string;
-    closeTime: string;
+    enabled: boolean;
+    open: string;
+    close: string;
   };
 };
 
@@ -109,7 +109,7 @@ export default function ConfiguracoesPage() {
       // Initialize business hours from API or with defaults (all closed)
       const defaultHours: BusinessHours = {};
       daysOfWeek.forEach(day => {
-        defaultHours[day.key] = { isOpen: false, openTime: '09:00', closeTime: '18:00' };
+        defaultHours[day.key] = { enabled: false, open: '09:00', close: '18:00' };
       });
       const apiBusinessHours = (establishment as any).businessHours || {};
       // Merge API data with defaults
@@ -155,7 +155,7 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const updateBusinessHour = (day: string, field: 'isOpen' | 'openTime' | 'closeTime', value: boolean | string) => {
+  const updateBusinessHour = (day: string, field: 'enabled' | 'open' | 'close', value: boolean | string) => {
     setBusinessHours((prev) => ({
       ...prev,
       [day]: {
@@ -305,22 +305,22 @@ export default function ConfiguracoesPage() {
             <CardContent>
               <div className="space-y-4">
                 {daysOfWeek.map((day) => {
-                  const dayHours = businessHours[day.key] || { isOpen: false, openTime: '09:00', closeTime: '18:00' };
+                  const dayHours = businessHours[day.key] || { enabled: false, open: '09:00', close: '18:00' };
                   return (
                     <div key={day.key} className="flex items-center gap-4 rounded-lg border p-4">
                       <div className="flex items-center gap-3">
                         <Switch
-                          checked={dayHours.isOpen}
-                          onCheckedChange={(checked) => updateBusinessHour(day.key, 'isOpen', checked)}
+                          checked={dayHours.enabled}
+                          onCheckedChange={(checked) => updateBusinessHour(day.key, 'enabled', checked)}
                         />
                         <span className="w-32 font-medium">{day.label}</span>
                       </div>
                       
-                      {dayHours.isOpen ? (
+                      {dayHours.enabled ? (
                         <div className="flex items-center gap-2">
                           <Select
-                            value={dayHours.openTime}
-                            onValueChange={(value) => updateBusinessHour(day.key, 'openTime', value)}
+                            value={dayHours.open}
+                            onValueChange={(value) => updateBusinessHour(day.key, 'open', value)}
                           >
                             <SelectTrigger className="w-24">
                               <SelectValue />
@@ -333,8 +333,8 @@ export default function ConfiguracoesPage() {
                           </Select>
                           <span className="text-muted-foreground">até</span>
                           <Select
-                            value={dayHours.closeTime}
-                            onValueChange={(value) => updateBusinessHour(day.key, 'closeTime', value)}
+                            value={dayHours.close}
+                            onValueChange={(value) => updateBusinessHour(day.key, 'close', value)}
                           >
                             <SelectTrigger className="w-24">
                               <SelectValue />
