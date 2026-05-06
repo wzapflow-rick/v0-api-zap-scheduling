@@ -16,8 +16,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Building2, Clock, Globe, Copy, Check, AlertCircle } from 'lucide-react';
 import { establishmentApi } from '@/lib/api';
-import type { Establishment, WorkingHours } from '@/types';
+import type { Establishment } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+// Business hours type matching API
+type BusinessHours = {
+  [key: string]: {
+    isOpen: boolean;
+    openTime: string;
+    closeTime: string;
+  };
+};
 
 const establishmentSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -62,7 +71,7 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
 export default function ConfiguracoesPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [workingHours, setWorkingHours] = useState<WorkingHours>({});
+  const [businessHours, setBusinessHours] = useState<BusinessHours>({});
 
   const { data: establishmentData, error, isLoading: isLoadingData, mutate } = useSWR(
     'establishment',
@@ -97,22 +106,20 @@ export default function ConfiguracoesPage() {
         zipCode: establishment.zipCode || '',
         slotDuration: establishment.slotDuration,
       });
-      // Initialize working hours from API or with defaults (all closed)
-      const defaultHours: WorkingHours = {};
+      // Initialize business hours from API or with defaults (all closed)
+      const defaultHours: BusinessHours = {};
       daysOfWeek.forEach(day => {
         defaultHours[day.key] = { isOpen: false, openTime: '09:00', closeTime: '18:00' };
       });
-      const apiWorkingHours = establishment.workingHours || {};
+      const apiBusinessHours = (establishment as any).businessHours || {};
       // Merge API data with defaults
-      const mergedHours: WorkingHours = { ...defaultHours };
-      Object.keys(apiWorkingHours).forEach(key => {
-        if (apiWorkingHours[key]) {
-          mergedHours[key] = apiWorkingHours[key];
+      const mergedHours: BusinessHours = { ...defaultHours };
+      Object.keys(apiBusinessHours).forEach(key => {
+        if (apiBusinessHours[key]) {
+          mergedHours[key] = apiBusinessHours[key];
         }
       });
-      console.log('[v0] workingHours from API:', apiWorkingHours);
-      console.log('[v0] merged workingHours:', mergedHours);
-      setWorkingHours(mergedHours);
+      setBusinessHours(mergedHours);
     }
   }, [establishment, reset]);
 
@@ -130,15 +137,10 @@ export default function ConfiguracoesPage() {
   const onSubmit = async (data: EstablishmentFormData) => {
     setIsLoading(true);
     try {
-      console.log('[v0] Saving establishment data:', data);
-      console.log('[v0] Saving workingHours:', workingHours);
-      
       const result = await establishmentApi.update({
         ...data,
-        workingHours,
+        businessHours,
       });
-
-      console.log('[v0] Update result:', result);
 
       if (result.success) {
         toast.success('Configurações salvas!');
@@ -147,15 +149,14 @@ export default function ConfiguracoesPage() {
         toast.error(result.error || 'Erro ao salvar configurações');
       }
     } catch (err) {
-      console.error('[v0] Update error:', err);
       toast.error('Erro ao salvar configurações');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateWorkingHour = (day: string, field: 'isOpen' | 'openTime' | 'closeTime', value: boolean | string) => {
-    setWorkingHours((prev) => ({
+  const updateBusinessHour = (day: string, field: 'isOpen' | 'openTime' | 'closeTime', value: boolean | string) => {
+    setBusinessHours((prev) => ({
       ...prev,
       [day]: {
         ...prev[day],
@@ -304,13 +305,13 @@ export default function ConfiguracoesPage() {
             <CardContent>
               <div className="space-y-4">
                 {daysOfWeek.map((day) => {
-                  const dayHours = workingHours[day.key] || { isOpen: false, openTime: '09:00', closeTime: '18:00' };
+                  const dayHours = businessHours[day.key] || { isOpen: false, openTime: '09:00', closeTime: '18:00' };
                   return (
                     <div key={day.key} className="flex items-center gap-4 rounded-lg border p-4">
                       <div className="flex items-center gap-3">
                         <Switch
                           checked={dayHours.isOpen}
-                          onCheckedChange={(checked) => updateWorkingHour(day.key, 'isOpen', checked)}
+                          onCheckedChange={(checked) => updateBusinessHour(day.key, 'isOpen', checked)}
                         />
                         <span className="w-32 font-medium">{day.label}</span>
                       </div>
@@ -319,7 +320,7 @@ export default function ConfiguracoesPage() {
                         <div className="flex items-center gap-2">
                           <Select
                             value={dayHours.openTime}
-                            onValueChange={(value) => updateWorkingHour(day.key, 'openTime', value)}
+                            onValueChange={(value) => updateBusinessHour(day.key, 'openTime', value)}
                           >
                             <SelectTrigger className="w-24">
                               <SelectValue />
@@ -333,7 +334,7 @@ export default function ConfiguracoesPage() {
                           <span className="text-muted-foreground">até</span>
                           <Select
                             value={dayHours.closeTime}
-                            onValueChange={(value) => updateWorkingHour(day.key, 'closeTime', value)}
+                            onValueChange={(value) => updateBusinessHour(day.key, 'closeTime', value)}
                           >
                             <SelectTrigger className="w-24">
                               <SelectValue />
