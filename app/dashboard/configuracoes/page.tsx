@@ -179,7 +179,11 @@ export default function ConfiguracoesPage() {
         };
       });
 
+      console.log('[v0] Sending payload to API:', JSON.stringify(payload, null, 2));
+      
       const result = await establishmentApi.update(payload);
+      
+      console.log('[v0] API response:', JSON.stringify(result, null, 2));
 
       if (result.success) {
         toast.success('Configurações salvas!');
@@ -188,6 +192,7 @@ export default function ConfiguracoesPage() {
         toast.error(result.error || 'Erro ao salvar configurações');
       }
     } catch (err) {
+      console.error('[v0] Error saving:', err);
       toast.error('Erro ao salvar configurações');
     } finally {
       setIsLoading(false);
