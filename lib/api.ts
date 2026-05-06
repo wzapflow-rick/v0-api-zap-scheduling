@@ -30,6 +30,11 @@ async function apiFetch<T>(
 ): Promise<ApiResponse<T>> {
   const token = getToken();
   
+  // Debug: log token status for authenticated endpoints
+  if (!endpoint.startsWith('/auth/') && !endpoint.startsWith('/public/')) {
+    console.log('[v0] apiFetch token exists:', !!token, 'endpoint:', endpoint);
+  }
+  
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
