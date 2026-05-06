@@ -19,8 +19,16 @@ import { establishmentApi } from '@/lib/api';
 import type { Establishment } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Business hours type matching API
-type BusinessHours = {
+// Business hours type - API returns with isOpen/openTime/closeTime but expects enabled/open/close
+type BusinessHoursAPI = {
+  [key: string]: {
+    isOpen?: boolean;
+    openTime?: string;
+    closeTime?: string;
+  };
+};
+
+type BusinessHoursLocal = {
   [key: string]: {
     enabled: boolean;
     open: string;
@@ -71,7 +79,15 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
 export default function ConfiguracoesPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [businessHours, setBusinessHours] = useState<BusinessHours>({});
+  const [businessHours, setBusinessHours] = useState<BusinessHoursLocal>({
+    monday: { enabled: false, open: '09:00', close: '18:00' },
+    tuesday: { enabled: false, open: '09:00', close: '18:00' },
+    wednesday: { enabled: false, open: '09:00', close: '18:00' },
+    thursday: { enabled: false, open: '09:00', close: '18:00' },
+    friday: { enabled: false, open: '09:00', close: '18:00' },
+    saturday: { enabled: false, open: '09:00', close: '18:00' },
+    sunday: { enabled: false, open: '09:00', close: '18:00' },
+  });
 
   const { data: establishmentData, error, isLoading: isLoadingData, mutate } = useSWR(
     'establishment',
@@ -106,20 +122,22 @@ export default function ConfiguracoesPage() {
         zipCode: establishment.zipCode || '',
         slotDuration: establishment.slotDuration,
       });
-      // Initialize business hours from API or with defaults (all closed)
-      const defaultHours: BusinessHours = {};
+      // Convert API format (isOpen/openTime/closeTime) to local format (enabled/open/close)
+      const apiBusinessHours = (establishment as any).businessHours as BusinessHoursAPI || {};
+      const convertedHours: BusinessHoursLocal = {};
       daysOfWeek.forEach(day => {
-        defaultHours[day.key] = { enabled: false, open: '09:00', close: '18:00' };
-      });
-      const apiBusinessHours = (establishment as any).businessHours || {};
-      // Merge API data with defaults
-      const mergedHours: BusinessHours = { ...defaultHours };
-      Object.keys(apiBusinessHours).forEach(key => {
-        if (apiBusinessHours[key]) {
-          mergedHours[key] = apiBusinessHours[key];
+        const apiDay = apiBusinessHours[day.key];
+        if (apiDay) {
+          convertedHours[day.key] = {
+            enabled: apiDay.isOpen ?? false,
+            open: apiDay.openTime || '09:00',
+            close: apiDay.closeTime || '18:00',
+          };
+        } else {
+          convertedHours[day.key] = { enabled: false, open: '09:00', close: '18:00' };
         }
       });
-      setBusinessHours(mergedHours);
+      setBusinessHours(convertedHours);
     }
   }, [establishment, reset]);
 
@@ -137,10 +155,31 @@ export default function ConfiguracoesPage() {
   const onSubmit = async (data: EstablishmentFormData) => {
     setIsLoading(true);
     try {
-      const result = await establishmentApi.update({
-        ...data,
-        businessHours,
+      // Convert local format to API format and remove empty email
+      const payload: any = {
+        name: data.name,
+        description: data.description || undefined,
+        phone: data.phone || undefined,
+        email: data.email || undefined, // Don't send empty string
+        address: data.address || undefined,
+        city: data.city || undefined,
+        state: data.state || undefined,
+        zipCode: data.zipCode || undefined,
+        slotDuration: data.slotDuration,
+        businessHours: {} as any,
+      };
+
+      // Convert local format (enabled/open/close) to API format (enabled/open/close)
+      daysOfWeek.forEach(day => {
+        const hours = businessHours[day.key];
+        payload.businessHours[day.key] = {
+          enabled: hours.enabled,
+          open: hours.open,
+          close: hours.close,
+        };
       });
+
+      const result = await establishmentApi.update(payload);
 
       if (result.success) {
         toast.success('Configurações salvas!');
