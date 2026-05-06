@@ -21,6 +21,7 @@ const sidebarLinks = [
     href: '/dashboard',
     label: 'Dashboard',
     icon: LayoutDashboard,
+    exact: true,
   },
   {
     href: '/dashboard/agendamentos',
@@ -80,8 +81,9 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-2">
         {sidebarLinks.map((link) => {
-          const isActive = pathname === link.href || 
-            (link.href !== '/dashboard' && pathname.startsWith(link.href));
+          const isActive = link.exact 
+            ? pathname === link.href 
+            : pathname === link.href || pathname.startsWith(link.href + '/');
           
           return (
             <Link
