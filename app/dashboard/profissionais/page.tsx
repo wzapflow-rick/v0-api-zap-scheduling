@@ -20,15 +20,17 @@ import { Plus, Search, Pencil, Trash2, Briefcase, Loader2, AlertCircle } from 'l
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { professionalsApi } from '@/lib/api';
-import type { Professional } from '@/types';
+import { professionalsApi, servicesApi } from '@/lib/api';
+import type { Professional, Service } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const professionalSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('E-mail inválido').optional().or(z.literal('')),
   phone: z.string().optional(),
   bio: z.string().optional(),
+  specialties: z.string().optional(),
   active: z.boolean().default(true),
 });
 
@@ -39,12 +41,19 @@ const professionalsFetcher = async (key: [string, string]) => {
   const [, search] = key;
   const res = await professionalsApi.list({ search, limit: 100 });
   if (!res.success) {
-    console.log('[v0] Professionals API error:', res.error);
     return [];
   }
-  // API returns { data: { professionals: [...], pagination: {...} } }
   const professionals = res.data?.professionals || res.data || [];
   return Array.isArray(professionals) ? professionals : [];
+};
+
+const servicesFetcher = async () => {
+  const res = await servicesApi.list({ limit: 100, active: true });
+  if (!res.success) {
+    return [];
+  }
+  const services = res.data?.services || res.data || [];
+  return Array.isArray(services) ? services : [];
 };
 
 export default function ProfissionaisPage() {
@@ -52,6 +61,7 @@ export default function ProfissionaisPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
   const { data: professionalsData, error, isLoading: isLoadingData, mutate } = useSWR(
     ['professionals', search],
@@ -62,7 +72,12 @@ export default function ProfissionaisPage() {
     }
   );
 
+  const { data: servicesData } = useSWR('services-for-professionals', servicesFetcher, {
+    revalidateOnFocus: false,
+  });
+
   const professionals = Array.isArray(professionalsData) ? professionalsData : [];
+  const availableServices = Array.isArray(servicesData) ? servicesData : [];
 
   const {
     register,
@@ -102,30 +117,54 @@ export default function ProfissionaisPage() {
 
   const openCreateForm = () => {
     setEditingProfessional(null);
-    reset({ name: '', email: '', phone: '', bio: '', active: true });
+    reset({ name: '', email: '', phone: '', bio: '', specialties: '', active: true });
+    setSelectedServices([]);
     setIsFormOpen(true);
   };
 
   const openEditForm = (professional: Professional) => {
     setEditingProfessional(professional);
+    const existingServiceIds = professional.services?.map(s => s.service.id) || [];
     reset({
       name: professional.name,
       email: professional.email || '',
       phone: professional.phone || '',
       bio: professional.bio || '',
+      specialties: (professional as any).specialties?.join(', ') || '',
       active: professional.active,
     });
+    setSelectedServices(existingServiceIds);
     setIsFormOpen(true);
   };
 
   const onSubmit = async (data: ProfessionalFormData) => {
     setIsLoading(true);
     try {
+      const specialtiesArray = data.specialties
+        ? data.specialties.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+
+      const professionalData = {
+        name: data.name,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        bio: data.bio || undefined,
+        specialties: specialtiesArray,
+        active: data.active,
+      };
+
       const result = editingProfessional
-        ? await professionalsApi.update(editingProfessional.id, data)
-        : await professionalsApi.create(data);
+        ? await professionalsApi.update(editingProfessional.id, professionalData)
+        : await professionalsApi.create(professionalData);
 
       if (result.success) {
+        // Assign services to professional if any selected
+        if (selectedServices.length > 0 && result.data?.id) {
+          for (const serviceId of selectedServices) {
+            await servicesApi.assignProfessionals(serviceId, [result.data.id]);
+          }
+        }
+
         toast.success(editingProfessional ? 'Profissional atualizado!' : 'Profissional cadastrado!');
         setIsFormOpen(false);
         mutate();
@@ -204,6 +243,45 @@ export default function ProfissionaisPage() {
                 <Label htmlFor="bio">Biografia</Label>
                 <Textarea id="bio" placeholder="Breve descrição do profissional..." {...register('bio')} disabled={isLoading} />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="specialties">Especialidades</Label>
+                <Input 
+                  id="specialties" 
+                  placeholder="Ex: Corte masculino, Barba, Coloração (separados por vírgula)"
+                  {...register('specialties')} 
+                  disabled={isLoading} 
+                />
+                <p className="text-xs text-muted-foreground">Separe as especialidades por vírgula</p>
+              </div>
+              {availableServices.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Serviços que este profissional realiza</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto rounded-lg border p-3">
+                    {availableServices.map((service: Service) => (
+                      <div key={service.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`service-${service.id}`}
+                          checked={selectedServices.includes(service.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedServices([...selectedServices, service.id]);
+                            } else {
+                              setSelectedServices(selectedServices.filter(id => id !== service.id));
+                            }
+                          }}
+                          disabled={isLoading}
+                        />
+                        <label
+                          htmlFor={`service-${service.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {service.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <Label htmlFor="active">Ativo</Label>
