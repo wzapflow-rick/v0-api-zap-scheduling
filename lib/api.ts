@@ -15,7 +15,8 @@ import type {
   SlotsResponse,
 } from '@/types';
 
-const API_BASE_URL = 'https://v0-zapflow-backend.vercel.app/api';
+// Use proxy to avoid CORS issues
+const API_BASE_URL = '/api/proxy';
 
 // Token management
 export const getToken = () => Cookies.get('auth_token');
