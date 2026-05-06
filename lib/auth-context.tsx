@@ -24,6 +24,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     const token = getToken();
+    console.log('[v0] refreshUser called, token exists:', !!token);
+    
     if (!token) {
       setUser(null);
       setIsLoading(false);
@@ -32,13 +34,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const response = await authApi.me();
+      console.log('[v0] authApi.me response:', response);
+      
       if (response.success && response.data) {
         setUser(response.data);
       } else {
+        console.log('[v0] Auth failed, clearing token');
         removeToken();
         setUser(null);
       }
-    } catch {
+    } catch (error) {
+      console.error('[v0] Auth error:', error);
       removeToken();
       setUser(null);
     } finally {
@@ -51,23 +57,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshUser]);
 
   const login = async (data: LoginRequest) => {
-    const response = await authApi.login(data);
-    if (response.success && response.data) {
-      setToken(response.data.token);
-      setUser(response.data.user);
-      return { success: true };
+    try {
+      const response = await authApi.login(data);
+      console.log('[v0] Login response:', response);
+      
+      if (response.success && response.data) {
+        setToken(response.data.token);
+        setUser(response.data.user);
+        return { success: true };
+      }
+      return { success: false, error: response.error || 'Erro ao fazer login' };
+    } catch (error) {
+      console.error('[v0] Login error:', error);
+      return { success: false, error: 'Erro ao fazer login' };
     }
-    return { success: false, error: response.error || 'Erro ao fazer login' };
   };
 
   const register = async (data: RegisterRequest) => {
-    const response = await authApi.register(data);
-    if (response.success && response.data) {
-      setToken(response.data.token);
-      setUser(response.data.user);
-      return { success: true };
+    try {
+      const response = await authApi.register(data);
+      console.log('[v0] Register response:', response);
+      
+      if (response.success && response.data) {
+        setToken(response.data.token);
+        setUser(response.data.user);
+        return { success: true };
+      }
+      return { success: false, error: response.error || 'Erro ao criar conta' };
+    } catch (error) {
+      console.error('[v0] Register error:', error);
+      return { success: false, error: 'Erro ao criar conta' };
     }
-    return { success: false, error: response.error || 'Erro ao criar conta' };
   };
 
   const logout = () => {

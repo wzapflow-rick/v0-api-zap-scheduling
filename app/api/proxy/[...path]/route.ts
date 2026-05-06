@@ -47,8 +47,16 @@ async function handleProxy(
   const searchParams = url.searchParams.toString();
   const targetUrl = `${API_BASE_URL}/${path}${searchParams ? `?${searchParams}` : ''}`;
 
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth_token')?.value;
+  // Try to get token from Authorization header first (client-side request)
+  // then fall back to cookie (server-side)
+  let token = request.headers.get('Authorization')?.replace('Bearer ', '');
+  
+  if (!token) {
+    const cookieStore = await cookies();
+    token = cookieStore.get('auth_token')?.value;
+  }
+
+  console.log('[v0] Proxy request:', targetUrl, 'token exists:', !!token);
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
