@@ -169,13 +169,13 @@ export default function ConfiguracoesPage() {
         businessHours: {} as any,
       };
 
-      // Convert local format (enabled/open/close) to API format (enabled/open/close)
+      // Convert local format to API format (isOpen/openTime/closeTime)
       daysOfWeek.forEach(day => {
         const hours = businessHours[day.key];
         payload.businessHours[day.key] = {
-          enabled: hours.enabled,
-          open: hours.open,
-          close: hours.close,
+          isOpen: hours.enabled,
+          openTime: hours.open,
+          closeTime: hours.close,
         };
       });
 
