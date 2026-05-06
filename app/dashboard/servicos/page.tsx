@@ -40,7 +40,9 @@ const servicesFetcher = async (key: [string, string]) => {
     console.log('[v0] Services API error:', res.error);
     return [];
   }
-  return res.data || [];
+  // API returns { data: { services: [...], pagination: {...} } }
+  const services = res.data?.services || res.data || [];
+  return Array.isArray(services) ? services : [];
 };
 
 export default function ServicosPage() {

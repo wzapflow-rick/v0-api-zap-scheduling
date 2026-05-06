@@ -39,7 +39,9 @@ const clientsFetcher = async (key: [string, string]) => {
     console.log('[v0] Clients API error:', res.error);
     return [];
   }
-  return res.data || [];
+  // API returns { data: { clients: [...], pagination: {...} } }
+  const clients = res.data?.clients || res.data || [];
+  return Array.isArray(clients) ? clients : [];
 };
 
 export default function ClientesPage() {
