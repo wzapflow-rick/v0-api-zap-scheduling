@@ -1,0 +1,157 @@
+// Enums
+export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
+export type SubscriptionStatus = 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'TRIALING';
+
+// Interfaces principais
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  establishmentId?: string;
+  establishment?: Establishment;
+  subscription?: Subscription;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Establishment {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  logoUrl?: string;
+  coverUrl?: string;
+  timezone: string;
+  slotDuration: number;
+  workingHours: WorkingHours;
+  _count?: {
+    professionals: number;
+    services: number;
+    clients: number;
+    appointments: number;
+  };
+}
+
+export interface WorkingHours {
+  [day: string]: {
+    isOpen: boolean;
+    openTime: string;
+    closeTime: string;
+  };
+}
+
+export interface Professional {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  bio?: string;
+  active: boolean;
+  workingHours?: WorkingHours;
+  services?: { service: Service }[];
+  createdAt: string;
+}
+
+export interface Service {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  duration: number;
+  category?: string;
+  active: boolean;
+  professionals?: { professional: Professional }[];
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  birthDate?: string;
+  notes?: string;
+  createdAt: string;
+  _count?: {
+    appointments: number;
+  };
+}
+
+export interface Appointment {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: AppointmentStatus;
+  price: number;
+  notes?: string;
+  professional: Professional;
+  service: Service;
+  client: Client;
+  createdAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  status: SubscriptionStatus;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  plan: Plan;
+}
+
+export interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  features: string[];
+}
+
+// Response padrão
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// Slots
+export interface TimeSlot {
+  time: string;
+  available: boolean;
+}
+
+export interface SlotsResponse {
+  date: string;
+  slots: TimeSlot[];
+}
+
+// Auth
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  establishmentName: string;
+}

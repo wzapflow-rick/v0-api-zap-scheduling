@@ -1,0 +1,307 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import useSWR from 'swr';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Building2, Clock, Globe, Copy, Check } from 'lucide-react';
+import { establishmentApi } from '@/lib/api';
+import type { Establishment, WorkingHours } from '@/types';
+
+const establishmentSchema = z.object({
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  description: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email('E-mail inválido').optional().or(z.literal('')),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  slotDuration: z.coerce.number().min(5, 'Duração mínima de 5 minutos'),
+});
+
+type EstablishmentFormData = z.infer<typeof establishmentSchema>;
+
+const daysOfWeek = [
+  { key: 'monday', label: 'Segunda-feira' },
+  { key: 'tuesday', label: 'Terça-feira' },
+  { key: 'wednesday', label: 'Quarta-feira' },
+  { key: 'thursday', label: 'Quinta-feira' },
+  { key: 'friday', label: 'Sexta-feira' },
+  { key: 'saturday', label: 'Sábado' },
+  { key: 'sunday', label: 'Domingo' },
+];
+
+const timeOptions = Array.from({ length: 48 }, (_, i) => {
+  const hours = Math.floor(i / 2);
+  const minutes = i % 2 === 0 ? '00' : '30';
+  return `${hours.toString().padStart(2, '0')}:${minutes}`;
+});
+
+export default function ConfiguracoesPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [workingHours, setWorkingHours] = useState<WorkingHours>({});
+
+  const { data: establishmentData, mutate } = useSWR('establishment', () =>
+    establishmentApi.get().then((res) => res.data)
+  );
+
+  const establishment = establishmentData;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<EstablishmentFormData>({
+    resolver: zodResolver(establishmentSchema),
+  });
+
+  useEffect(() => {
+    if (establishment) {
+      reset({
+        name: establishment.name,
+        description: establishment.description || '',
+        phone: establishment.phone || '',
+        email: establishment.email || '',
+        address: establishment.address || '',
+        city: establishment.city || '',
+        state: establishment.state || '',
+        zipCode: establishment.zipCode || '',
+        slotDuration: establishment.slotDuration,
+      });
+      setWorkingHours(establishment.workingHours || {});
+    }
+  }, [establishment, reset]);
+
+  const publicUrl = establishment?.slug
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/agendar/${establishment.slug}`
+    : '';
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(publicUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success('Link copiado!');
+  };
+
+  const onSubmit = async (data: EstablishmentFormData) => {
+    setIsLoading(true);
+    try {
+      const result = await establishmentApi.update({
+        ...data,
+        workingHours,
+      });
+
+      if (result.success) {
+        toast.success('Configurações salvas!');
+        mutate();
+      } else {
+        toast.error(result.error || 'Erro ao salvar configurações');
+      }
+    } catch {
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateWorkingHour = (day: string, field: 'isOpen' | 'openTime' | 'closeTime', value: boolean | string) => {
+    setWorkingHours((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value,
+      },
+    }));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
+        <p className="text-muted-foreground">Gerencie as configurações do seu estabelecimento</p>
+      </div>
+
+      {/* Public Link */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Página de Agendamento
+          </CardTitle>
+          <CardDescription>
+            Compartilhe este link para seus clientes agendarem online
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <Input value={publicUrl} readOnly className="flex-1 bg-muted" />
+            <Button variant="outline" onClick={copyLink}>
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="geral">
+        <TabsList>
+          <TabsTrigger value="geral">Informações Gerais</TabsTrigger>
+          <TabsTrigger value="horarios">Horários de Funcionamento</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="geral">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Informações do Estabelecimento
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome do Estabelecimento</Label>
+                    <Input id="name" {...register('name')} disabled={isLoading} />
+                    {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="slotDuration">Duração do Slot (minutos)</Label>
+                    <Input id="slotDuration" type="number" min="5" step="5" {...register('slotDuration')} disabled={isLoading} />
+                    {errors.slotDuration && <p className="text-sm text-destructive">{errors.slotDuration.message}</p>}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Descrição</Label>
+                  <Textarea id="description" placeholder="Descreva seu estabelecimento..." {...register('description')} disabled={isLoading} />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input id="phone" {...register('phone')} disabled={isLoading} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input id="email" type="email" {...register('email')} disabled={isLoading} />
+                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address">Endereço</Label>
+                  <Input id="address" {...register('address')} disabled={isLoading} />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">Cidade</Label>
+                    <Input id="city" {...register('city')} disabled={isLoading} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state">Estado</Label>
+                    <Input id="state" {...register('state')} disabled={isLoading} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="zipCode">CEP</Label>
+                    <Input id="zipCode" {...register('zipCode')} disabled={isLoading} />
+                  </div>
+                </div>
+
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar Alterações
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="horarios">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Horários de Funcionamento
+              </CardTitle>
+              <CardDescription>
+                Configure os dias e horários em que seu estabelecimento atende
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {daysOfWeek.map((day) => {
+                  const dayHours = workingHours[day.key] || { isOpen: false, openTime: '09:00', closeTime: '18:00' };
+                  return (
+                    <div key={day.key} className="flex items-center gap-4 rounded-lg border p-4">
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          checked={dayHours.isOpen}
+                          onCheckedChange={(checked) => updateWorkingHour(day.key, 'isOpen', checked)}
+                        />
+                        <span className="w-32 font-medium">{day.label}</span>
+                      </div>
+                      
+                      {dayHours.isOpen ? (
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={dayHours.openTime}
+                            onValueChange={(value) => updateWorkingHour(day.key, 'openTime', value)}
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {timeOptions.map((time) => (
+                                <SelectItem key={time} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="text-muted-foreground">até</span>
+                          <Select
+                            value={dayHours.closeTime}
+                            onValueChange={(value) => updateWorkingHour(day.key, 'closeTime', value)}
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {timeOptions.map((time) => (
+                                <SelectItem key={time} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Fechado</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <Button onClick={handleSubmit(onSubmit)} className="mt-6" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar Horários
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
