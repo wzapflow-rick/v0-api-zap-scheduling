@@ -14,10 +14,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Building2, Clock, Globe, Copy, Check, AlertCircle } from 'lucide-react';
+import { Loader2, Building2, Clock, Globe, Copy, Check, AlertCircle, MessageCircle } from 'lucide-react';
 import { establishmentApi } from '@/lib/api';
 import type { Establishment } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AutomaticMessages } from '@/components/dashboard/automatic-messages';
 
 // Business hours type - API returns with isOpen/openTime/closeTime but expects enabled/open/close
 type BusinessHoursAPI = {
@@ -264,6 +265,10 @@ export default function ConfiguracoesPage() {
         <TabsList>
           <TabsTrigger value="geral">Informações Gerais</TabsTrigger>
           <TabsTrigger value="horarios">Horários de Funcionamento</TabsTrigger>
+          <TabsTrigger value="mensagens" className="gap-2">
+            <MessageCircle className="h-4 w-4" />
+            Mensagens Automáticas
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral">
@@ -404,6 +409,12 @@ export default function ConfiguracoesPage() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="mensagens">
+          {establishment?.id && (
+            <AutomaticMessages establishmentId={establishment.id} />
+          )}
         </TabsContent>
       </Tabs>
     </div>
