@@ -35,7 +35,15 @@ import {
   Megaphone,
   Lock,
   Info,
+  Eye,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { AutomaticMessage, AUTOMATIC_MESSAGES } from '@/types/evolution';
 import { MessagePreview } from './message-preview';
@@ -69,11 +77,10 @@ interface MessageCardProps {
   message: AutomaticMessage;
   isActive: boolean;
   isDisabled?: boolean;
-  isSelected?: boolean;
-  onClick?: () => void;
+  onPreview: () => void;
 }
 
-function MessageCard({ message, isActive, isDisabled, isSelected, onClick }: MessageCardProps) {
+function MessageCard({ message, isActive, isDisabled, onPreview }: MessageCardProps) {
   const {
     attributes,
     listeners,
@@ -100,10 +107,8 @@ function MessageCard({ message, isActive, isDisabled, isSelected, onClick }: Mes
         'border-l-4',
         isDragging && 'opacity-50 shadow-lg',
         isDisabled && 'opacity-50 cursor-not-allowed',
-        isSelected && 'ring-2 ring-primary',
-        !isDisabled && 'cursor-pointer hover:border-primary/50 hover:shadow-sm',
+        !isDisabled && 'hover:border-primary/50 hover:shadow-sm',
       )}
-      onClick={onClick}
     >
       <button
         {...attributes}
@@ -125,6 +130,17 @@ function MessageCard({ message, isActive, isDisabled, isSelected, onClick }: Mes
         <p className="truncate text-sm font-medium">{message.name}</p>
         <p className="truncate text-xs text-muted-foreground">{message.description}</p>
       </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+        onClick={(e) => {
+          e.stopPropagation();
+          onPreview();
+        }}
+      >
+        <Eye className="h-4 w-4" />
+      </Button>
       {isActive && (
         <Badge variant="secondary" className="shrink-0 text-xs">
           Ativa
@@ -153,7 +169,7 @@ function DragOverlayCard({ message }: { message: AutomaticMessage }) {
 }
 
 export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesChange }: MessageSelectorProps) {
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [previewMessage, setPreviewMessage] = useState<AutomaticMessage | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -174,11 +190,6 @@ export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesC
       .map(id => AUTOMATIC_MESSAGES.find(msg => msg.id === id))
       .filter((msg): msg is AutomaticMessage => msg !== undefined),
     [activeMessageIds]
-  );
-
-  const selectedMessage = useMemo(() => 
-    AUTOMATIC_MESSAGES.find(msg => msg.id === selectedMessageId) || null,
-    [selectedMessageId]
   );
 
   const isAtLimit = activeMessageIds.length >= planLimit;
@@ -225,15 +236,25 @@ export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesC
     : null;
 
   return (
+    <>
+    <Dialog open={!!previewMessage} onOpenChange={(open) => !open && setPreviewMessage(null)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{previewMessage?.name}</DialogTitle>
+        </DialogHeader>
+        {previewMessage && <MessagePreview message={previewMessage} />}
+      </DialogContent>
+    </Dialog>
+    
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         {/* Available Messages */}
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Mensagens Disponíveis</CardTitle>
             <CardDescription>
@@ -257,8 +278,7 @@ export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesC
                         message={message}
                         isActive={false}
                         isDisabled={isAtLimit}
-                        isSelected={selectedMessageId === message.id}
-                        onClick={() => setSelectedMessageId(message.id)}
+                        onPreview={() => setPreviewMessage(message)}
                       />
                     </div>
                     <Button
@@ -283,7 +303,7 @@ export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesC
         </Card>
 
         {/* Active Messages */}
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
@@ -330,8 +350,7 @@ export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesC
                       <MessageCard
                         message={message}
                         isActive={true}
-                        isSelected={selectedMessageId === message.id}
-                        onClick={() => setSelectedMessageId(message.id)}
+                        onPreview={() => setPreviewMessage(message)}
                       />
                     </div>
                   </div>
@@ -351,16 +370,12 @@ export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesC
             </SortableContext>
           </CardContent>
         </Card>
-
-        {/* Message Preview */}
-        <div className="lg:col-span-1">
-          <MessagePreview message={selectedMessage} />
-        </div>
       </div>
 
       <DragOverlay>
         {draggedMessage ? <DragOverlayCard message={draggedMessage} /> : null}
       </DragOverlay>
     </DndContext>
+    </>
   );
 }
