@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import useSWR from 'swr';
-import { format, addDays, isBefore, startOfToday } from 'date-fns';
+import { format, addDays, isBefore, startOfToday, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -75,6 +75,19 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
           : slot
       )
     : [];
+
+  // Filter out past time slots if selected date is today
+  const filteredSlots = slots.filter((slot) => {
+    if (!selectedDate || !isToday(selectedDate)) {
+      return true; // Show all slots for future dates
+    }
+    // For today, filter out past times
+    const now = new Date();
+    const [hours, minutes] = slot.time.split(':').map(Number);
+    const slotTime = new Date();
+    slotTime.setHours(hours, minutes, 0, 0);
+    return slotTime > now;
+  });
 
   const {
     register,
@@ -398,20 +411,24 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
               <div>
                 <Label className="mb-3 block">Horário</Label>
                 {slots.length > 0 ? (
-                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
-                    {slots.map((slot: TimeSlot) => (
-                      <Button
-                        key={slot.time}
-                        variant={selectedTime === slot.time ? 'default' : 'outline'}
-                        size="sm"
-                        disabled={!slot.available}
-                        onClick={() => setSelectedTime(slot.time)}
-                        className={cn(!slot.available && 'opacity-50')}
-                      >
-                        {slot.time}
-                      </Button>
-                    ))}
-                  </div>
+                  filteredSlots.length > 0 ? (
+                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
+                      {filteredSlots.map((slot: TimeSlot) => (
+                        <Button
+                          key={slot.time}
+                          variant={selectedTime === slot.time ? 'default' : 'outline'}
+                          size="sm"
+                          disabled={!slot.available}
+                          onClick={() => setSelectedTime(slot.time)}
+                          className={cn(!slot.available && 'opacity-50')}
+                        >
+                          {slot.time}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhum horário disponível para hoje. Selecione outra data.</p>
+                  )
                 ) : (
                   <p className="text-sm text-muted-foreground">Carregando horários disponíveis...</p>
                 )}
