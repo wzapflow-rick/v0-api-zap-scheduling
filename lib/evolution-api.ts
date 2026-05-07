@@ -14,6 +14,12 @@ async function evolutionFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<EvolutionResponse<T>> {
+  console.log('[v0] Evolution API config:', { 
+    hasUrl: !!EVOLUTION_API_URL, 
+    hasKey: !!EVOLUTION_API_KEY,
+    url: EVOLUTION_API_URL 
+  });
+  
   if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
     return {
       success: false,
@@ -23,6 +29,8 @@ async function evolutionFetch<T>(
 
   try {
     const url = `${EVOLUTION_API_URL}${endpoint}`;
+    console.log('[v0] Evolution API request:', { url, method: options.method || 'GET' });
+    
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -33,6 +41,9 @@ async function evolutionFetch<T>(
     });
 
     const text = await response.text();
+    console.log('[v0] Evolution API response status:', response.status);
+    console.log('[v0] Evolution API response text:', text.substring(0, 500));
+    
     let data: T | undefined;
     
     if (text) {
@@ -45,6 +56,7 @@ async function evolutionFetch<T>(
 
     if (!response.ok) {
       const errorData = data as { message?: string } | undefined;
+      console.log('[v0] Evolution API error:', errorData);
       return {
         success: false,
         error: errorData?.message || `Erro ${response.status}: ${response.statusText}`,
@@ -53,6 +65,7 @@ async function evolutionFetch<T>(
 
     return { success: true, data };
   } catch (error) {
+    console.error('[v0] Evolution API fetch error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Erro de conexão',

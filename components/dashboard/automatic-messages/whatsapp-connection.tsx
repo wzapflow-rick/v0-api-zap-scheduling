@@ -36,8 +36,10 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
 
   const checkStatus = useCallback(async () => {
     try {
+      console.log('[v0] Checking status for establishmentId:', establishmentId);
       const response = await fetch(`/api/evolution/status?establishmentId=${establishmentId}`);
       const result = await response.json();
+      console.log('[v0] Status response:', result);
       
       if (result.success) {
         setStatus(result.data);
@@ -48,9 +50,11 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
           setQrCode(null);
           setConnecting(false);
         }
+      } else {
+        console.log('[v0] Status check failed:', result.error);
       }
     } catch (error) {
-      console.error('Error checking status:', error);
+      console.error('[v0] Error checking status:', error);
     } finally {
       setLoading(false);
     }
@@ -58,12 +62,14 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
 
   const createInstance = async () => {
     try {
+      console.log('[v0] Creating instance for:', establishmentId);
       const response = await fetch('/api/evolution/instance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ establishmentId }),
       });
       const result = await response.json();
+      console.log('[v0] Create instance response:', result);
       
       if (!result.success) {
         throw new Error(result.error);
@@ -71,14 +77,17 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
       
       return result.data;
     } catch (error) {
+      console.error('[v0] Create instance error:', error);
       throw error;
     }
   };
 
   const getQRCode = async () => {
     try {
+      console.log('[v0] Getting QR code for:', establishmentId);
       const response = await fetch(`/api/evolution/qrcode?establishmentId=${establishmentId}`);
       const result = await response.json();
+      console.log('[v0] QR code response:', result);
       
       if (result.success && result.data) {
         setQrCode(result.data);
@@ -87,7 +96,7 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
       
       return null;
     } catch (error) {
-      console.error('Error getting QR code:', error);
+      console.error('[v0] Error getting QR code:', error);
       return null;
     }
   };
