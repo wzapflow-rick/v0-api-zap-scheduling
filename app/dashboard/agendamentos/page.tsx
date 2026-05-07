@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Loader2, AlertCircle, Check, X, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { appointmentsApi, professionalsApi } from '@/lib/api';
 import type { Appointment, AppointmentStatus, Professional } from '@/types';
@@ -80,6 +81,24 @@ export default function AgendamentosPage() {
   const [professionalFilter, setProfessionalFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const updateAppointmentStatus = async (appointmentId: string, newStatus: AppointmentStatus) => {
+    setUpdatingId(appointmentId);
+    try {
+      const result = await appointmentsApi.updateStatus(appointmentId, newStatus);
+      if (result.success) {
+        toast.success(`Status atualizado para ${statusLabels[newStatus]}`);
+        mutate();
+      } else {
+        toast.error(result.error || 'Erro ao atualizar status');
+      }
+    } catch {
+      toast.error('Erro ao conectar com o servidor');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const startDate = format(startOfMonth(currentDate), 'yyyy-MM-dd');
   const endDate = format(endOfMonth(currentDate), 'yyyy-MM-dd');
@@ -316,28 +335,70 @@ export default function AgendamentosPage() {
                         }
                         return time;
                       };
+                      const isUpdating = updatingId === apt.id;
+                      
                       return (
-                      <Link
+                      <div
                         key={apt.id}
-                        href={`/dashboard/agendamentos/${apt.id}`}
-                        className="block rounded-lg border border-border p-3 transition-colors hover:border-primary/50"
+                        className="rounded-lg border border-border p-3 transition-colors hover:border-primary/50"
                       >
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="flex items-center gap-1 text-sm font-medium">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(apt.startTime)} - {formatTime(apt.endTime)}
-                          </span>
-                          <Badge className={cn('text-xs', statusColors[apt.status])}>
-                            {statusLabels[apt.status]}
-                          </Badge>
-                        </div>
-                        <p className="font-medium text-foreground">{apt.client.name}</p>
-                        <p className="text-sm text-muted-foreground">{apt.service.name}</p>
-                        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                          <User className="h-3 w-3" />
-                          {apt.professional.name}
-                        </p>
-                      </Link>
+                        <Link href={`/dashboard/agendamentos/${apt.id}`}>
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="flex items-center gap-1 text-sm font-medium">
+                              <Clock className="h-3 w-3" />
+                              {formatTime(apt.startTime)} - {formatTime(apt.endTime)}
+                            </span>
+                            <Badge className={cn('text-xs', statusColors[apt.status])}>
+                              {statusLabels[apt.status]}
+                            </Badge>
+                          </div>
+                          <p className="font-medium text-foreground">{apt.client.name}</p>
+                          <p className="text-sm text-muted-foreground">{apt.service.name}</p>
+                          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            {apt.professional.name}
+                          </p>
+                        </Link>
+                        
+                        {/* Quick Action Buttons */}
+                        {apt.status === 'PENDING' && (
+                          <div className="mt-3 flex gap-2 border-t border-border pt-3">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                              onClick={() => updateAppointmentStatus(apt.id, 'CANCELLED')}
+                              disabled={isUpdating}
+                            >
+                              {isUpdating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <X className="mr-1 h-3 w-3" />}
+                              Cancelar
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => updateAppointmentStatus(apt.id, 'CONFIRMED')}
+                              disabled={isUpdating}
+                            >
+                              {isUpdating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Check className="mr-1 h-3 w-3" />}
+                              Confirmar
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {apt.status === 'CONFIRMED' && (
+                          <div className="mt-3 border-t border-border pt-3">
+                            <Button
+                              size="sm"
+                              className="w-full bg-success hover:bg-success/90"
+                              onClick={() => updateAppointmentStatus(apt.id, 'COMPLETED')}
+                              disabled={isUpdating}
+                            >
+                              {isUpdating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle className="mr-1 h-3 w-3" />}
+                              Marcar como Concluído
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     );})}
                 </div>
               ) : (
