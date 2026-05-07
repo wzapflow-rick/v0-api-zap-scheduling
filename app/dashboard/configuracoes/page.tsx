@@ -111,6 +111,9 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => {
     if (establishment) {
+      console.log('[v0] Establishment data loaded:', establishment);
+      console.log('[v0] Raw businessHours from API:', (establishment as any).businessHours);
+      
       reset({
         name: establishment.name,
         description: establishment.description || '',
@@ -137,6 +140,7 @@ export default function ConfiguracoesPage() {
           convertedHours[day.key] = { enabled: false, open: '09:00', close: '18:00' };
         }
       });
+      console.log('[v0] Converted businessHours for UI:', convertedHours);
       setBusinessHours(convertedHours);
     }
   }, [establishment, reset]);
