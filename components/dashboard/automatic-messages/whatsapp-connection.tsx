@@ -35,6 +35,23 @@ export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [savedToBackend, setSavedToBackend] = useState(false);
+
+  const saveConnectionToBackend = useCallback(async (connected: boolean, phoneNumber?: string | null) => {
+    if (savedToBackend && connected) return; // Already saved as connected
+    
+    try {
+      const instanceName = `ZapFlow-Agenda_${slug}`;
+      await automaticMessagesApi.updateWhatsAppConnection(establishmentId, {
+        whatsappConnected: connected,
+        whatsappInstanceName: instanceName,
+        whatsappPhone: phoneNumber || null,
+      });
+      if (connected) setSavedToBackend(true);
+    } catch {
+      // Backend endpoint may not exist yet - silently fail
+    }
+  }, [establishmentId, slug, savedToBackend]);
 
   const checkStatus = useCallback(async () => {
     try {
@@ -45,18 +62,13 @@ export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }
         setStatus(result.data);
         onConnectionChange?.(result.data.connected);
         
-        // If connected, clear QR code and save connection to backend
+        // If connected, clear QR code
         if (result.data.connected) {
           setQrCode(null);
           setConnecting(false);
           
-          // Save WhatsApp connection status to backend
-          const instanceName = `ZapFlow-Agenda_${slug}`;
-          await automaticMessagesApi.updateWhatsAppConnection(establishmentId, {
-            whatsappConnected: true,
-            whatsappInstanceName: instanceName,
-            whatsappPhone: result.data.phoneNumber || null,
-          });
+          // Save to backend only once
+          saveConnectionToBackend(true, result.data.phoneNumber);
         }
       }
     } catch {
@@ -64,7 +76,7 @@ export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }
     } finally {
       setLoading(false);
     }
-  }, [slug, establishmentId, onConnectionChange]);
+  }, [slug, onConnectionChange, saveConnectionToBackend]);
 
   const createInstance = async () => {
     const response = await fetch('/api/evolution/instance', {
@@ -133,14 +145,10 @@ export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }
         setStatus(prev => prev ? { ...prev, connected: false, state: 'close' } : null);
         setQrCode(null);
         onConnectionChange?.(false);
+        setSavedToBackend(false);
         
         // Save disconnection to backend
-        const instanceName = `ZapFlow-Agenda_${slug}`;
-        await automaticMessagesApi.updateWhatsAppConnection(establishmentId, {
-          whatsappConnected: false,
-          whatsappInstanceName: instanceName,
-          whatsappPhone: null,
-        });
+        saveConnectionToBackend(false, null);
       } else {
         throw new Error(result.error);
       }
