@@ -56,11 +56,9 @@ export function AutomaticMessages({ establishmentId, slug, planLimit = 5 }: Auto
     setSaving(true);
     
     try {
-      console.log('[v0] Saving automatic messages:', { establishmentId, activeMessages });
       const result = await automaticMessagesApi.update(establishmentId, {
         activeMessages,
       });
-      console.log('[v0] Save result:', result);
       
       if (result.success) {
         setHasChanges(false);
@@ -68,8 +66,7 @@ export function AutomaticMessages({ establishmentId, slug, planLimit = 5 }: Auto
       } else {
         toast.error(result.error || 'Erro ao salvar configurações');
       }
-    } catch (error) {
-      console.error('[v0] Save error:', error);
+    } catch {
       toast.error('Erro ao conectar com o servidor');
     } finally {
       setSaving(false);
