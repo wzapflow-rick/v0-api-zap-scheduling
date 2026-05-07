@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Smartphone, RefreshCw, LogOut, CheckCircle2, XCircle, Wifi } from 'lucide-react';
 import { toast } from 'sonner';
+import { automaticMessagesApi } from '@/lib/api';
 
 interface WhatsAppConnectionProps {
   establishmentId: string;
@@ -44,10 +45,18 @@ export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }
         setStatus(result.data);
         onConnectionChange?.(result.data.connected);
         
-        // If connected, clear QR code
+        // If connected, clear QR code and save connection to backend
         if (result.data.connected) {
           setQrCode(null);
           setConnecting(false);
+          
+          // Save WhatsApp connection status to backend
+          const instanceName = `ZapFlow-Agenda_${slug}`;
+          await automaticMessagesApi.updateWhatsAppConnection(establishmentId, {
+            whatsappConnected: true,
+            whatsappInstanceName: instanceName,
+            whatsappPhone: result.data.phoneNumber || null,
+          });
         }
       }
     } catch {
@@ -55,7 +64,7 @@ export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }
     } finally {
       setLoading(false);
     }
-  }, [slug, onConnectionChange]);
+  }, [slug, establishmentId, onConnectionChange]);
 
   const createInstance = async () => {
     const response = await fetch('/api/evolution/instance', {
@@ -124,6 +133,14 @@ export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }
         setStatus(prev => prev ? { ...prev, connected: false, state: 'close' } : null);
         setQrCode(null);
         onConnectionChange?.(false);
+        
+        // Save disconnection to backend
+        const instanceName = `ZapFlow-Agenda_${slug}`;
+        await automaticMessagesApi.updateWhatsAppConnection(establishmentId, {
+          whatsappConnected: false,
+          whatsappInstanceName: instanceName,
+          whatsappPhone: null,
+        });
       } else {
         throw new Error(result.error);
       }

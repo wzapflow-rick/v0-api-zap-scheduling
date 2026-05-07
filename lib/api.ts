@@ -279,6 +279,7 @@ export const automaticMessagesApi = {
       activeMessages: string[];
       whatsappConnected: boolean;
       whatsappPhone: string | null;
+      whatsappInstanceName: string | null;
     }>(`/establishments/${establishmentId}/automatic-messages`),
 
   update: (establishmentId: string, data: { activeMessages: string[] }) =>
@@ -286,7 +287,23 @@ export const automaticMessagesApi = {
       activeMessages: string[];
       whatsappConnected: boolean;
       whatsappPhone: string | null;
+      whatsappInstanceName: string | null;
     }>(`/establishments/${establishmentId}/automatic-messages`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  updateWhatsAppConnection: (establishmentId: string, data: { 
+    whatsappConnected: boolean; 
+    whatsappInstanceName: string;
+    whatsappPhone?: string | null;
+  }) =>
+    apiFetch<{
+      activeMessages: string[];
+      whatsappConnected: boolean;
+      whatsappPhone: string | null;
+      whatsappInstanceName: string | null;
+    }>(`/establishments/${establishmentId}/automatic-messages/whatsapp`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
