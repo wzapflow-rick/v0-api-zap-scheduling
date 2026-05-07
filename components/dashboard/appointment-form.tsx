@@ -211,65 +211,7 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {/* Client */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Cliente</Label>
-          <Dialog open={isQuickClientOpen} onOpenChange={setIsQuickClientOpen}>
-            <DialogTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="h-auto p-1 text-xs text-primary hover:text-primary/80">
-                <UserPlus className="mr-1 h-3 w-3" />
-                Novo Cliente
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[400px]">
-              <DialogHeader>
-                <DialogTitle>Cadastro Rápido de Cliente</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmitQuickClient(onQuickClientSubmit)} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="quick-name">Nome *</Label>
-                  <Input
-                    id="quick-name"
-                    placeholder="Nome do cliente"
-                    {...registerQuickClient('name')}
-                    disabled={isCreatingClient}
-                  />
-                  {quickClientErrors.name && (
-                    <p className="text-sm text-destructive">{quickClientErrors.name.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="quick-phone">Telefone *</Label>
-                  <Input
-                    id="quick-phone"
-                    placeholder="(00) 00000-0000"
-                    {...registerQuickClient('phone')}
-                    disabled={isCreatingClient}
-                  />
-                  {quickClientErrors.phone && (
-                    <p className="text-sm text-destructive">{quickClientErrors.phone.message}</p>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Você pode completar o cadastro do cliente posteriormente na seção de Clientes.
-                </p>
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsQuickClientOpen(false)}
-                    disabled={isCreatingClient}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={isCreatingClient}>
-                    {isCreatingClient && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Criar Cliente
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Label>Cliente</Label>
         <Select
           onValueChange={(value) => setValue('clientId', value)}
           disabled={isLoading}
