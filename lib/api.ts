@@ -47,7 +47,21 @@ async function apiFetch<T>(
       headers,
     });
 
-    const data = await response.json();
+    // Handle empty responses gracefully
+    const text = await response.text();
+    let data: any = {};
+    
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // If response is not JSON but request was successful, treat as success
+        if (response.ok) {
+          return { success: true, data: null as unknown as T };
+        }
+        return { success: false, error: 'Resposta inválida do servidor' };
+      }
+    }
     
     if (!response.ok) {
       return {
@@ -56,7 +70,12 @@ async function apiFetch<T>(
       };
     }
 
-    return data;
+    // If response has success field, return as-is; otherwise wrap it
+    if ('success' in data) {
+      return data;
+    }
+    
+    return { success: true, data };
   } catch (error) {
     return {
       success: false,
