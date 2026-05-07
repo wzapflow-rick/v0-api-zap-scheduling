@@ -134,12 +134,12 @@ export default function DashboardPage() {
     // Monthly revenue (completed appointments)
     const monthlyRevenue = allAppointments
       .filter((a: Appointment) => a.status === 'COMPLETED')
-      .reduce((sum: number, a: Appointment) => sum + (a.price || 0), 0);
+      .reduce((sum: number, a: Appointment) => sum + (parseFloat(String(a.price)) || 0), 0);
     
     // Previous month revenue
     const prevMonthRevenue = prevAppointments
       .filter((a: Appointment) => a.status === 'COMPLETED')
-      .reduce((sum: number, a: Appointment) => sum + (a.price || 0), 0);
+      .reduce((sum: number, a: Appointment) => sum + (parseFloat(String(a.price)) || 0), 0);
     
     // Revenue change percentage
     const revenueChange = prevMonthRevenue > 0 
@@ -203,7 +203,7 @@ export default function DashboardPage() {
         );
         const revenue = dayAppointments
           .filter((a: Appointment) => a.status === 'COMPLETED')
-          .reduce((sum: number, a: Appointment) => sum + (a.price || 0), 0);
+          .reduce((sum: number, a: Appointment) => sum + (parseFloat(String(a.price)) || 0), 0);
         
         return {
           name: format(day, 'EEE', { locale: ptBR }).charAt(0).toUpperCase() + format(day, 'EEE', { locale: ptBR }).slice(1),
@@ -229,7 +229,7 @@ export default function DashboardPage() {
         
         const revenue = weekAppointments
           .filter((a: Appointment) => a.status === 'COMPLETED')
-          .reduce((sum: number, a: Appointment) => sum + (a.price || 0), 0);
+          .reduce((sum: number, a: Appointment) => sum + (parseFloat(String(a.price)) || 0), 0);
         
         weeks.push({
           name: `Sem ${weekNum}`,
