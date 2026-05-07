@@ -15,16 +15,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const { establishmentId } = await request.json();
+    const { establishmentId, slug } = await request.json();
     
-    if (!establishmentId) {
+    if (!establishmentId || !slug) {
       return NextResponse.json(
-        { success: false, error: 'ID do estabelecimento é obrigatório' },
+        { success: false, error: 'ID e slug do estabelecimento são obrigatórios' },
         { status: 400 }
       );
     }
 
-    const instanceName = `zapflow-${establishmentId}`;
+    const instanceName = `ZapFlow-Agenda_${slug}`;
     
     // Try to get existing instance first
     const existingInstance = await getInstanceInfo(instanceName);
@@ -80,17 +80,17 @@ export async function DELETE(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const establishmentId = searchParams.get('establishmentId');
+    const slug = searchParams.get('slug');
     const action = searchParams.get('action') || 'logout'; // logout or delete
 
-    if (!establishmentId) {
+    if (!slug) {
       return NextResponse.json(
-        { success: false, error: 'ID do estabelecimento é obrigatório' },
+        { success: false, error: 'Slug do estabelecimento é obrigatório' },
         { status: 400 }
       );
     }
 
-    const instanceName = `zapflow-${establishmentId}`;
+    const instanceName = `ZapFlow-Agenda_${slug}`;
     
     let result;
     if (action === 'delete') {

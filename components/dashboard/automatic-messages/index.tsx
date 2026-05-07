@@ -13,6 +13,7 @@ import { AutoMessageConfig } from '@/types/evolution';
 
 interface AutomaticMessagesProps {
   establishmentId: string;
+  slug: string;
 }
 
 const STORAGE_KEY = 'zapflow_auto_messages_config';
@@ -25,7 +26,7 @@ const PLAN_LIMITS: Record<string, number> = {
   enterprise: 10,
 };
 
-export function AutomaticMessages({ establishmentId }: AutomaticMessagesProps) {
+export function AutomaticMessages({ establishmentId, slug }: AutomaticMessagesProps) {
   const [config, setConfig] = useState<AutoMessageConfig>({
     establishmentId,
     whatsappConnected: false,
@@ -125,6 +126,7 @@ export function AutomaticMessages({ establishmentId }: AutomaticMessagesProps) {
       {/* WhatsApp Connection */}
       <WhatsAppConnection
         establishmentId={establishmentId}
+        slug={slug}
         onConnectionChange={handleConnectionChange}
       />
 

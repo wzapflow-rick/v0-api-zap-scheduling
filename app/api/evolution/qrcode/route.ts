@@ -15,16 +15,16 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const establishmentId = searchParams.get('establishmentId');
+    const slug = searchParams.get('slug');
 
-    if (!establishmentId) {
+    if (!slug) {
       return NextResponse.json(
-        { success: false, error: 'ID do estabelecimento é obrigatório' },
+        { success: false, error: 'Slug do estabelecimento é obrigatório' },
         { status: 400 }
       );
     }
 
-    const instanceName = `zapflow-${establishmentId}`;
+    const instanceName = `ZapFlow-Agenda_${slug}`;
     const result = await connectInstance(instanceName);
 
     if (!result.success) {

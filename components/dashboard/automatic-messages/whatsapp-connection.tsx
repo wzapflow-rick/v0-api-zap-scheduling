@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 
 interface WhatsAppConnectionProps {
   establishmentId: string;
+  slug: string;
   onConnectionChange?: (connected: boolean) => void;
 }
 
@@ -27,7 +28,7 @@ interface QRCodeData {
   pairingCode?: string;
 }
 
-export function WhatsAppConnection({ establishmentId, onConnectionChange }: WhatsAppConnectionProps) {
+export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }: WhatsAppConnectionProps) {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [qrCode, setQrCode] = useState<QRCodeData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +37,7 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
 
   const checkStatus = useCallback(async () => {
     try {
-      const response = await fetch(`/api/evolution/status?establishmentId=${establishmentId}`);
+      const response = await fetch(`/api/evolution/status?slug=${slug}`);
       const result = await response.json();
       
       if (result.success) {
@@ -54,13 +55,13 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
     } finally {
       setLoading(false);
     }
-  }, [establishmentId, onConnectionChange]);
+  }, [slug, onConnectionChange]);
 
   const createInstance = async () => {
     const response = await fetch('/api/evolution/instance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ establishmentId }),
+      body: JSON.stringify({ establishmentId, slug }),
     });
     const result = await response.json();
     
@@ -73,7 +74,7 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
 
   const getQRCode = async () => {
     try {
-      const response = await fetch(`/api/evolution/qrcode?establishmentId=${establishmentId}`);
+      const response = await fetch(`/api/evolution/qrcode?slug=${slug}`);
       const result = await response.json();
       
       if (result.success && result.data) {
@@ -113,7 +114,7 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
     
     try {
       const response = await fetch(
-        `/api/evolution/instance?establishmentId=${establishmentId}&action=logout`,
+        `/api/evolution/instance?slug=${slug}&action=logout`,
         { method: 'DELETE' }
       );
       const result = await response.json();
