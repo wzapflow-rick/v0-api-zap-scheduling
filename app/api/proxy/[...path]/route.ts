@@ -56,11 +56,6 @@ async function handleProxy(
     token = cookieStore.get('auth_token')?.value;
   }
 
-  console.log('[v0] Proxy request:', targetUrl, 'method:', request.method, 'token exists:', !!token);
-  if (body) {
-    console.log('[v0] Request body being sent to backend:', body);
-  }
-
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -76,6 +71,11 @@ async function handleProxy(
     } catch {
       // No body
     }
+  }
+
+  console.log('[v0] Proxy request:', targetUrl, 'method:', request.method, 'token exists:', !!token);
+  if (body) {
+    console.log('[v0] Request body being sent to backend:', body);
   }
 
   try {
