@@ -1,64 +1,54 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Save, MessageCircle, AlertTriangle } from 'lucide-react';
+import { Save, MessageCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { WhatsAppConnection } from './whatsapp-connection';
 import { MessageSelector } from './message-selector';
-import { AutoMessageConfig } from '@/types/evolution';
+import { automaticMessagesApi } from '@/lib/api';
 
 interface AutomaticMessagesProps {
   establishmentId: string;
   slug: string;
+  planLimit?: number;
 }
 
-const STORAGE_KEY = 'zapflow_auto_messages_config';
-
-// Simulated plan limits - will come from backend in production
-const PLAN_LIMITS: Record<string, number> = {
-  free: 3,
-  basic: 5,
-  pro: 10,
-  enterprise: 10,
-};
-
-export function AutomaticMessages({ establishmentId, slug }: AutomaticMessagesProps) {
-  const [config, setConfig] = useState<AutoMessageConfig>({
-    establishmentId,
-    whatsappConnected: false,
-    whatsappNumber: null,
-    instanceName: null,
-    activeMessages: [],
-    planLimit: 5, // Default to basic plan
-    updatedAt: new Date().toISOString(),
-  });
+export function AutomaticMessages({ establishmentId, slug, planLimit = 5 }: AutomaticMessagesProps) {
+  const [activeMessages, setActiveMessages] = useState<string[]>([]);
+  const [whatsappConnected, setWhatsappConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Load config from localStorage
-  useEffect(() => {
-    const savedConfig = localStorage.getItem(`${STORAGE_KEY}_${establishmentId}`);
-    if (savedConfig) {
-      try {
-        const parsed = JSON.parse(savedConfig);
-        setConfig(prev => ({ ...prev, ...parsed }));
-      } catch (e) {
-        console.error('Error loading saved config:', e);
+  // Load config from API
+  const loadConfig = useCallback(async () => {
+    try {
+      const result = await automaticMessagesApi.get(establishmentId);
+      if (result.success && result.data) {
+        setActiveMessages(result.data.activeMessages || []);
+        setWhatsappConnected(result.data.whatsappConnected || false);
       }
+    } catch {
+      // If endpoint doesn't exist yet, use empty defaults
+    } finally {
+      setLoading(false);
     }
   }, [establishmentId]);
 
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
+
   const handleConnectionChange = (connected: boolean) => {
-    setConfig(prev => ({ ...prev, whatsappConnected: connected }));
-    setHasChanges(true);
+    setWhatsappConnected(connected);
   };
 
-  const handleActiveMessagesChange = (activeMessages: string[]) => {
-    setConfig(prev => ({ ...prev, activeMessages }));
+  const handleActiveMessagesChange = (newActiveMessages: string[]) => {
+    setActiveMessages(newActiveMessages);
     setHasChanges(true);
   };
 
@@ -66,32 +56,30 @@ export function AutomaticMessages({ establishmentId, slug }: AutomaticMessagesPr
     setSaving(true);
     
     try {
-      // Save to localStorage for now (until backend is ready)
-      const updatedConfig = {
-        ...config,
-        updatedAt: new Date().toISOString(),
-      };
+      const result = await automaticMessagesApi.update(establishmentId, {
+        activeMessages,
+      });
       
-      localStorage.setItem(
-        `${STORAGE_KEY}_${establishmentId}`,
-        JSON.stringify(updatedConfig)
-      );
-      
-      setConfig(updatedConfig);
-      setHasChanges(false);
-      toast.success('Configurações salvas!');
-      
-      // TODO: When backend is ready, save to API
-      // await fetch('/api/auto-messages/config', {
-      //   method: 'PUT',
-      //   body: JSON.stringify(updatedConfig),
-      // });
-    } catch (error) {
+      if (result.success) {
+        setHasChanges(false);
+        toast.success('Configurações salvas!');
+      } else {
+        toast.error(result.error || 'Erro ao salvar configurações');
+      }
+    } catch {
       toast.error('Erro ao salvar configurações');
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -108,20 +96,6 @@ export function AutomaticMessages({ establishmentId, slug }: AutomaticMessagesPr
           {saving ? 'Salvando...' : 'Salvar Alterações'}
         </Button>
       </div>
-
-      {/* Info Banner */}
-      <Card className="border-amber-200 bg-amber-50">
-        <CardContent className="flex items-start gap-3 py-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-          <div className="text-sm text-amber-800">
-            <p className="font-medium">Funcionalidade em desenvolvimento</p>
-            <p className="mt-1">
-              As mensagens automáticas serão enviadas quando o backend estiver configurado. 
-              Por enquanto, você pode configurar quais mensagens deseja ativar.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* WhatsApp Connection */}
       <WhatsAppConnection
@@ -152,15 +126,15 @@ export function AutomaticMessages({ establishmentId, slug }: AutomaticMessagesPr
                 Plano: Básico
               </Badge>
               <p className="mt-1 text-xs text-muted-foreground">
-                {config.activeMessages.length}/{config.planLimit} mensagens
+                {activeMessages.length}/{planLimit} mensagens
               </p>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <MessageSelector
-            activeMessageIds={config.activeMessages}
-            planLimit={config.planLimit}
+            activeMessageIds={activeMessages}
+            planLimit={planLimit}
             onActiveMessagesChange={handleActiveMessagesChange}
           />
         </CardContent>

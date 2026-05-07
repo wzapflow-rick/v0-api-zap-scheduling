@@ -272,6 +272,26 @@ export const subscriptionsApi = {
   getPlans: () => apiFetch<Plan[]>('/plans'),
 };
 
+// Automatic Messages API
+export const automaticMessagesApi = {
+  get: (establishmentId: string) =>
+    apiFetch<{
+      activeMessages: string[];
+      whatsappConnected: boolean;
+      whatsappPhone: string | null;
+    }>(`/establishments/${establishmentId}/automatic-messages`),
+
+  update: (establishmentId: string, data: { activeMessages: string[] }) =>
+    apiFetch<{
+      activeMessages: string[];
+      whatsappConnected: boolean;
+      whatsappPhone: string | null;
+    }>(`/establishments/${establishmentId}/automatic-messages`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
+
 // Public API (sem autenticação)
 export const publicApi = {
   getEstablishment: (slug: string) =>
