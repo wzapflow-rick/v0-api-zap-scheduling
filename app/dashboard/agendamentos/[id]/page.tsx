@@ -34,6 +34,15 @@ const statusLabels: Record<AppointmentStatus, string> = {
   NO_SHOW: 'Não compareceu',
 };
 
+// Format time from ISO timestamp ("1970-01-01T12:00:00.000Z") to "HH:mm"
+const formatTime = (time: string) => {
+  if (!time) return '';
+  if (time.includes('T')) {
+    return time.split('T')[1].substring(0, 5);
+  }
+  return time;
+};
+
 export default function AgendamentoDetalhePage() {
   const params = useParams();
   const router = useRouter();
@@ -178,7 +187,7 @@ export default function AgendamentoDetalhePage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Horário</p>
                   <p className="font-medium">
-                    {appointment.startTime} - {appointment.endTime}
+                    {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
                   </p>
                 </div>
               </div>
