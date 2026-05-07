@@ -42,16 +42,20 @@ export async function GET(request: Request) {
       });
     }
 
+    // Evolution API returns { instance: { instanceName, state } }
+    const instanceData = statusResult.data as { instance?: { state?: string } };
+    const state = instanceData?.instance?.state || 'close';
+
     // If connected, get profile info
     let profileInfo = null;
-    if (statusResult.data?.state === 'open') {
+    if (state === 'open') {
       const infoResult = await getInstanceInfo(instanceName);
       if (infoResult.success && infoResult.data) {
-        const instanceData = infoResult.data as { instance?: { profileName?: string; profilePictureUrl?: string; owner?: string } };
+        const infoData = infoResult.data as { instance?: { profileName?: string; profilePictureUrl?: string; owner?: string } };
         profileInfo = {
-          profileName: instanceData.instance?.profileName,
-          profilePictureUrl: instanceData.instance?.profilePictureUrl,
-          phoneNumber: instanceData.instance?.owner,
+          profileName: infoData.instance?.profileName,
+          profilePictureUrl: infoData.instance?.profilePictureUrl,
+          phoneNumber: infoData.instance?.owner,
         };
       }
     }
@@ -60,8 +64,8 @@ export async function GET(request: Request) {
       success: true,
       data: {
         instanceName,
-        state: statusResult.data?.state || 'close',
-        connected: statusResult.data?.state === 'open',
+        state,
+        connected: state === 'open',
         ...profileInfo,
       },
     });
