@@ -24,6 +24,14 @@ import { professionalsApi, servicesApi } from '@/lib/api';
 import type { Professional, Service } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  WorkingHoursEditor, 
+  WorkingHoursLocal, 
+  defaultWorkingHours, 
+  apiToLocalWorkingHours, 
+  localToApiWorkingHours 
+} from '@/components/dashboard/working-hours';
 
 const professionalSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -62,6 +70,7 @@ export default function ProfissionaisPage() {
   const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHoursLocal>({ ...defaultWorkingHours });
 
   const { data: professionalsData, error, isLoading: isLoadingData, mutate } = useSWR(
     ['professionals', search],
@@ -119,6 +128,7 @@ export default function ProfissionaisPage() {
     setEditingProfessional(null);
     reset({ name: '', email: '', phone: '', bio: '', specialties: '', active: true });
     setSelectedServices([]);
+    setWorkingHours({ ...defaultWorkingHours });
     setIsFormOpen(true);
   };
 
@@ -134,6 +144,7 @@ export default function ProfissionaisPage() {
       active: professional.active,
     });
     setSelectedServices(existingServiceIds);
+    setWorkingHours(apiToLocalWorkingHours(professional.workingHours));
     setIsFormOpen(true);
   };
 
@@ -144,6 +155,9 @@ export default function ProfissionaisPage() {
         ? data.specialties.split(',').map(s => s.trim()).filter(Boolean)
         : [];
 
+      // Check if any working hours are enabled
+      const hasCustomWorkingHours = Object.values(workingHours).some(day => day.enabled);
+
       const professionalData = {
         name: data.name,
         email: data.email || undefined,
@@ -151,6 +165,8 @@ export default function ProfissionaisPage() {
         bio: data.bio || undefined,
         specialties: specialtiesArray,
         active: data.active,
+        // Only send working hours if at least one day is enabled
+        workingHours: hasCustomWorkingHours ? localToApiWorkingHours(workingHours) : undefined,
       };
 
       const result = editingProfessional
@@ -215,7 +231,7 @@ export default function ProfissionaisPage() {
               Novo Profissional
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingProfessional ? 'Editar Profissional' : 'Novo Profissional'}</DialogTitle>
               <DialogDescription>
@@ -223,77 +239,99 @@ export default function ProfissionaisPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input id="name" {...register('name')} disabled={isLoading} />
-                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input id="email" type="email" {...register('email')} disabled={isLoading} />
-                  {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input id="phone" {...register('phone')} disabled={isLoading} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bio">Biografia</Label>
-                <Textarea id="bio" placeholder="Breve descrição do profissional..." {...register('bio')} disabled={isLoading} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="specialties">Especialidades</Label>
-                <Input 
-                  id="specialties" 
-                  placeholder="Ex: Corte masculino, Barba, Coloração (separados por vírgula)"
-                  {...register('specialties')} 
-                  disabled={isLoading} 
-                />
-                <p className="text-xs text-muted-foreground">Separe as especialidades por vírgula</p>
-              </div>
-              {availableServices.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Serviços que este profissional realiza</Label>
-                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto rounded-lg border p-3">
-                    {availableServices.map((service: Service) => (
-                      <div key={service.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`service-${service.id}`}
-                          checked={selectedServices.includes(service.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedServices([...selectedServices, service.id]);
-                            } else {
-                              setSelectedServices(selectedServices.filter(id => id !== service.id));
-                            }
-                          }}
-                          disabled={isLoading}
-                        />
-                        <label
-                          htmlFor={`service-${service.id}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          {service.name}
-                        </label>
-                      </div>
-                    ))}
+              <Tabs defaultValue="info" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="info">Informações</TabsTrigger>
+                  <TabsTrigger value="horarios">Horários de Trabalho</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="info" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome</Label>
+                    <Input id="name" {...register('name')} disabled={isLoading} />
+                    {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                   </div>
-                </div>
-              )}
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label htmlFor="active">Ativo</Label>
-                  <p className="text-sm text-muted-foreground">Profissional disponível para agendamentos</p>
-                </div>
-                <Switch
-                  id="active"
-                  checked={isActive}
-                  onCheckedChange={(checked) => setValue('active', checked)}
-                  disabled={isLoading}
-                />
-              </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">E-mail</Label>
+                      <Input id="email" type="email" {...register('email')} disabled={isLoading} />
+                      {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Telefone</Label>
+                      <Input id="phone" {...register('phone')} disabled={isLoading} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Biografia</Label>
+                    <Textarea id="bio" placeholder="Breve descrição do profissional..." {...register('bio')} disabled={isLoading} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="specialties">Especialidades</Label>
+                    <Input 
+                      id="specialties" 
+                      placeholder="Ex: Corte masculino, Barba, Coloração (separados por vírgula)"
+                      {...register('specialties')} 
+                      disabled={isLoading} 
+                    />
+                    <p className="text-xs text-muted-foreground">Separe as especialidades por vírgula</p>
+                  </div>
+                  {availableServices.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Serviços que este profissional realiza</Label>
+                      <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto rounded-lg border p-3">
+                        {availableServices.map((service: Service) => (
+                          <div key={service.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`service-${service.id}`}
+                              checked={selectedServices.includes(service.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedServices([...selectedServices, service.id]);
+                                } else {
+                                  setSelectedServices(selectedServices.filter(id => id !== service.id));
+                                }
+                              }}
+                              disabled={isLoading}
+                            />
+                            <label
+                              htmlFor={`service-${service.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              {service.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <Label htmlFor="active">Ativo</Label>
+                      <p className="text-sm text-muted-foreground">Profissional disponível para agendamentos</p>
+                    </div>
+                    <Switch
+                      id="active"
+                      checked={isActive}
+                      onCheckedChange={(checked) => setValue('active', checked)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="horarios" className="mt-4">
+                  <WorkingHoursEditor
+                    value={workingHours}
+                    onChange={setWorkingHours}
+                    disabled={isLoading}
+                    compact
+                  />
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Se nenhum dia estiver habilitado, o profissional usará os horários do estabelecimento.
+                  </p>
+                </TabsContent>
+              </Tabs>
+              
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editingProfessional ? 'Salvar Alterações' : 'Cadastrar Profissional'}

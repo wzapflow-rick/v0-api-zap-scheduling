@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { automaticMessagesApi } from '@/lib/api';
 
 interface WhatsAppConnectionProps {
-  establishmentId: string;
   slug: string;
   onConnectionChange?: (connected: boolean) => void;
 }
@@ -29,7 +28,7 @@ interface QRCodeData {
   pairingCode?: string;
 }
 
-export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }: WhatsAppConnectionProps) {
+export function WhatsAppConnection({ slug, onConnectionChange }: WhatsAppConnectionProps) {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [qrCode, setQrCode] = useState<QRCodeData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,17 +40,15 @@ export function WhatsAppConnection({ establishmentId, slug, onConnectionChange }
     if (savedToBackend && connected) return; // Already saved as connected
     
     try {
-      const instanceName = `ZapFlow-Agenda_${slug}`;
-      await automaticMessagesApi.updateWhatsAppConnection(establishmentId, {
-        whatsappConnected: connected,
-        whatsappInstanceName: instanceName,
-        whatsappPhone: phoneNumber || null,
+      await automaticMessagesApi.updateWhatsAppConnection({
+        connected,
+        phone: phoneNumber || null,
       });
       if (connected) setSavedToBackend(true);
     } catch {
       // Backend endpoint may not exist yet - silently fail
     }
-  }, [establishmentId, slug, savedToBackend]);
+  }, [savedToBackend]);
 
   const checkStatus = useCallback(async () => {
     try {

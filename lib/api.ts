@@ -272,41 +272,91 @@ export const subscriptionsApi = {
   getPlans: () => apiFetch<Plan[]>('/plans'),
 };
 
-// Automatic Messages API
+// Automatic Messages API - Uses backend routes at /api/automatic-messages
 export const automaticMessagesApi = {
-  get: (establishmentId: string) =>
+  // GET /api/automatic-messages - Get config
+  get: () =>
     apiFetch<{
       activeMessages: string[];
       whatsappConnected: boolean;
       whatsappPhone: string | null;
       whatsappInstanceName: string | null;
-    }>(`/establishments/${establishmentId}/automatic-messages`),
+      availableMessages?: Array<{
+        id: string;
+        name: string;
+        description: string;
+        trigger: string;
+      }>;
+    }>('/automatic-messages'),
 
-  update: (establishmentId: string, data: { activeMessages: string[] }) =>
+  // PUT /api/automatic-messages - Update active messages
+  update: (data: { activeMessages: string[] }) =>
     apiFetch<{
       activeMessages: string[];
       whatsappConnected: boolean;
       whatsappPhone: string | null;
       whatsappInstanceName: string | null;
-    }>(`/establishments/${establishmentId}/automatic-messages`, {
+    }>('/automatic-messages', {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  updateWhatsAppConnection: (establishmentId: string, data: { 
-    whatsappConnected: boolean; 
-    whatsappInstanceName: string;
-    whatsappPhone?: string | null;
+  // GET /api/automatic-messages/whatsapp - Get WhatsApp status/QR code
+  getWhatsAppStatus: () =>
+    apiFetch<{
+      connected: boolean;
+      phone?: string;
+      instanceName?: string;
+      qrcode?: string;
+      pairingCode?: string;
+    }>('/automatic-messages/whatsapp'),
+
+  // POST /api/automatic-messages/whatsapp - Update WhatsApp connection (webhook)
+  updateWhatsAppConnection: (data: { 
+    connected: boolean; 
+    phone?: string | null;
   }) =>
-    apiFetch<{
-      activeMessages: string[];
-      whatsappConnected: boolean;
-      whatsappPhone: string | null;
-      whatsappInstanceName: string | null;
-    }>(`/establishments/${establishmentId}/automatic-messages/whatsapp`, {
-      method: 'PUT',
+    apiFetch<{ success: boolean }>('/automatic-messages/whatsapp', {
+      method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // DELETE /api/automatic-messages/whatsapp - Disconnect WhatsApp
+  disconnectWhatsApp: () =>
+    apiFetch<{ success: boolean }>('/automatic-messages/whatsapp', {
+      method: 'DELETE',
+    }),
+
+  // GET /api/automatic-messages/logs - Get message logs
+  getLogs: (params?: { 
+    page?: number; 
+    limit?: number; 
+    messageType?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.messageType) searchParams.set('messageType', params.messageType);
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.startDate) searchParams.set('startDate', params.startDate);
+    if (params?.endDate) searchParams.set('endDate', params.endDate);
+    return apiFetch<{
+      logs: Array<{
+        id: string;
+        messageType: string;
+        recipientPhone: string;
+        recipientName: string;
+        content: string;
+        status: 'SENT' | 'FAILED' | 'PENDING';
+        sentAt: string;
+      }>;
+      stats: { total: number; sent: number; failed: number; pending: number };
+      pagination: { page: number; limit: number; total: number };
+    }>(`/automatic-messages/logs?${searchParams}`);
+  },
 };
 
 // Public API (sem autenticação)

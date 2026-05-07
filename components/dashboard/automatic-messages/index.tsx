@@ -12,12 +12,11 @@ import { MessageSelector } from './message-selector';
 import { automaticMessagesApi } from '@/lib/api';
 
 interface AutomaticMessagesProps {
-  establishmentId: string;
   slug: string;
   planLimit?: number;
 }
 
-export function AutomaticMessages({ establishmentId, slug, planLimit = 5 }: AutomaticMessagesProps) {
+export function AutomaticMessages({ slug, planLimit = 5 }: AutomaticMessagesProps) {
   const [activeMessages, setActiveMessages] = useState<string[]>([]);
   const [whatsappConnected, setWhatsappConnected] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -27,7 +26,7 @@ export function AutomaticMessages({ establishmentId, slug, planLimit = 5 }: Auto
   // Load config from API
   const loadConfig = useCallback(async () => {
     try {
-      const result = await automaticMessagesApi.get(establishmentId);
+      const result = await automaticMessagesApi.get();
       if (result.success && result.data) {
         setActiveMessages(result.data.activeMessages || []);
         setWhatsappConnected(result.data.whatsappConnected || false);
@@ -37,7 +36,7 @@ export function AutomaticMessages({ establishmentId, slug, planLimit = 5 }: Auto
     } finally {
       setLoading(false);
     }
-  }, [establishmentId]);
+  }, []);
 
   useEffect(() => {
     loadConfig();
@@ -56,7 +55,7 @@ export function AutomaticMessages({ establishmentId, slug, planLimit = 5 }: Auto
     setSaving(true);
     
     try {
-      const result = await automaticMessagesApi.update(establishmentId, {
+      const result = await automaticMessagesApi.update({
         activeMessages,
       });
       
@@ -99,7 +98,6 @@ export function AutomaticMessages({ establishmentId, slug, planLimit = 5 }: Auto
 
       {/* WhatsApp Connection */}
       <WhatsAppConnection
-        establishmentId={establishmentId}
         slug={slug}
         onConnectionChange={handleConnectionChange}
       />
