@@ -184,6 +184,10 @@ export default function ConfiguracoesPage() {
           closeTime: hours.close,
         };
       });
+      
+      // Also send as workingHours for backend compatibility
+      // The backend may expect workingHours instead of businessHours
+      payload.workingHours = payload.businessHours;
 
       console.log('[v0] Sending payload to API:', JSON.stringify(payload, null, 2));
       
