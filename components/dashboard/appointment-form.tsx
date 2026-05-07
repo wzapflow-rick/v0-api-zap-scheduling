@@ -43,16 +43,37 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
   const [selectedService, setSelectedService] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
 
-  const { data: professionalsData } = useSWR('professionals', () =>
-    professionalsApi.list({ active: true, limit: 100 }).then((res) => res.data)
+  const { data: professionalsData } = useSWR('professionals-form', () =>
+    professionalsApi.list({ active: true, limit: 100 }).then((res) => {
+      const data = res.data;
+      // Handle both array and paginated response formats
+      if (Array.isArray(data)) return data;
+      if (data && typeof data === 'object' && 'items' in data) return (data as { items: Professional[] }).items;
+      if (data && typeof data === 'object' && 'data' in data) return (data as { data: Professional[] }).data;
+      return [];
+    })
   );
 
-  const { data: servicesData } = useSWR('services', () =>
-    servicesApi.list({ active: true, limit: 100 }).then((res) => res.data)
+  const { data: servicesData } = useSWR('services-form', () =>
+    servicesApi.list({ active: true, limit: 100 }).then((res) => {
+      const data = res.data;
+      // Handle both array and paginated response formats
+      if (Array.isArray(data)) return data;
+      if (data && typeof data === 'object' && 'items' in data) return (data as { items: Service[] }).items;
+      if (data && typeof data === 'object' && 'data' in data) return (data as { data: Service[] }).data;
+      return [];
+    })
   );
 
-  const { data: clientsData } = useSWR('clients', () =>
-    clientsApi.list({ limit: 1000 }).then((res) => res.data)
+  const { data: clientsData } = useSWR('clients-form', () =>
+    clientsApi.list({ limit: 1000 }).then((res) => {
+      const data = res.data;
+      // Handle both array and paginated response formats
+      if (Array.isArray(data)) return data;
+      if (data && typeof data === 'object' && 'items' in data) return (data as { items: Client[] }).items;
+      if (data && typeof data === 'object' && 'data' in data) return (data as { data: Client[] }).data;
+      return [];
+    })
   );
 
   const { data: slotsData } = useSWR(
