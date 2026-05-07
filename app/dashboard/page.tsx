@@ -55,13 +55,21 @@ const monthlyAppointmentsFetcher = async (key: [string, string, string]) => {
   const [, startDate, endDate] = key;
   const res = await appointmentsApi.list({ startDate, endDate, limit: 1000 });
   if (!res.success) return [];
-  return res.data || [];
+  // Handle both array and object with appointments property
+  const data = res.data;
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.appointments)) return data.appointments;
+  return [];
 };
 
 const clientsFetcher = async () => {
   const res = await clientsApi.list({ limit: 1000 });
   if (!res.success) return [];
-  return res.data || [];
+  // Handle both array and object with clients property
+  const data = res.data;
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.clients)) return data.clients;
+  return [];
 };
 
 export default function DashboardPage() {
