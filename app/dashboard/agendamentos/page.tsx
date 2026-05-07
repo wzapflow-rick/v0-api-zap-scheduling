@@ -36,7 +36,6 @@ const statusLabels: Record<AppointmentStatus, string> = {
 // Safe fetchers that handle API errors gracefully
 const appointmentsFetcher = async (key: [string, string, string, string, string]) => {
   const [, startDate, endDate, professionalFilter, statusFilter] = key;
-  console.log('[v0] Fetching appointments with params:', { startDate, endDate, professionalFilter, statusFilter });
   const res = await appointmentsApi.list({
     startDate,
     endDate,
@@ -44,22 +43,35 @@ const appointmentsFetcher = async (key: [string, string, string, string, string]
     professionalId: professionalFilter !== 'all' ? professionalFilter : undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
   });
-  console.log('[v0] Appointments API response:', res);
   if (!res.success) {
-    console.log('[v0] Appointments API error:', res.error);
     return [];
   }
-  console.log('[v0] Appointments data received:', res.data);
-  return res.data || [];
+  // API returns { success: true, data: { appointments: [...] } }
+  // Handle both formats: direct array or nested in appointments property
+  const data = res.data as any;
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data?.appointments && Array.isArray(data.appointments)) {
+    return data.appointments;
+  }
+  return [];
 };
 
 const professionalsFetcher = async () => {
   const res = await professionalsApi.list({ limit: 100 });
   if (!res.success) {
-    console.log('[v0] Professionals API error:', res.error);
     return [];
   }
-  return res.data || [];
+  // Handle both formats: direct array or nested in professionals property
+  const data = res.data as any;
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data?.professionals && Array.isArray(data.professionals)) {
+    return data.professionals;
+  }
+  return [];
 };
 
 export default function AgendamentosPage() {

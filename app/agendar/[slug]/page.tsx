@@ -68,8 +68,6 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
   const establishment = establishmentData as Establishment & { professionals: Professional[]; services: Service[] };
   // API returns slots as string array ["09:00", "09:30", ...], convert to TimeSlot format
   const rawSlots = slotsData?.slots || [];
-  console.log('[v0] Raw slots data:', slotsData);
-  console.log('[v0] Raw slots array:', rawSlots);
   const slots: TimeSlot[] = Array.isArray(rawSlots) 
     ? rawSlots.map((slot: string | TimeSlot) => 
         typeof slot === 'string' 
@@ -77,7 +75,6 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
           : slot
       )
     : [];
-  console.log('[v0] Converted slots:', slots);
 
   const {
     register,
