@@ -15,11 +15,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const { establishmentId, slug } = await request.json();
+    const { slug } = await request.json();
     
-    if (!establishmentId || !slug) {
+    if (!slug) {
       return NextResponse.json(
-        { success: false, error: 'ID e slug do estabelecimento são obrigatórios' },
+        { success: false, error: 'Slug do estabelecimento é obrigatório' },
         { status: 400 }
       );
     }

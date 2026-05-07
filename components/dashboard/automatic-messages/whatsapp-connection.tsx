@@ -79,7 +79,7 @@ export function WhatsAppConnection({ slug, onConnectionChange }: WhatsAppConnect
     const response = await fetch('/api/evolution/instance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ establishmentId, slug }),
+      body: JSON.stringify({ slug }),
     });
     const result = await response.json();
     
