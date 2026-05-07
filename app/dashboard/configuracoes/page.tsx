@@ -70,9 +70,11 @@ const daysOfWeek = [
   { key: 'sunday', label: 'Domingo' },
 ];
 
-const timeOptions = Array.from({ length: 48 }, (_, i) => {
-  const hours = Math.floor(i / 2);
-  const minutes = i % 2 === 0 ? '00' : '30';
+// Generate time options every 15 minutes for more flexibility
+const timeOptions = Array.from({ length: 96 }, (_, i) => {
+  const hours = Math.floor(i / 4);
+  const minuteIndex = i % 4;
+  const minutes = ['00', '15', '30', '45'][minuteIndex];
   return `${hours.toString().padStart(2, '0')}:${minutes}`;
 });
 
@@ -191,7 +193,9 @@ export default function ConfiguracoesPage() {
 
       if (result.success) {
         toast.success('Configurações salvas!');
-        mutate();
+        // Force revalidation and update the cache with fresh data
+        await mutate(undefined, { revalidate: true });
+        console.log('[v0] Data revalidated after save');
       } else {
         toast.error(result.error || 'Erro ao salvar configurações');
       }
