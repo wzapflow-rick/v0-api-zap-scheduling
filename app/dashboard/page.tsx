@@ -429,21 +429,21 @@ export default function DashboardPage() {
                     formatter={(value: number) => [formatCurrency(value), 'Receita']}
                     labelFormatter={(label) => label}
                     contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e5e7eb',
                       borderRadius: '8px',
-                      color: 'hsl(var(--foreground))',
                       boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                      padding: '8px 12px',
                     }}
                     labelStyle={{
-                      color: 'hsl(var(--foreground))',
+                      color: '#111827',
                       fontWeight: 600,
                       marginBottom: '4px',
                     }}
                     itemStyle={{
-                      color: 'hsl(var(--muted-foreground))',
+                      color: '#374151',
                     }}
-                    cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                    cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
                   />
                   <Bar 
                     dataKey="value" 
