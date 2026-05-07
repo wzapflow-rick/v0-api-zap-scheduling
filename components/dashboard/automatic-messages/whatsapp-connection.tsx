@@ -261,15 +261,11 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
                 alt="QR Code WhatsApp"
                 className="h-48 w-48"
               />
-              {connecting && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/80">
-                  <div className="text-center">
-                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                    <p className="mt-2 text-sm text-muted-foreground">Aguardando conexão...</p>
-                  </div>
-                </div>
-              )}
             </div>
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Aguardando leitura do QR Code...
+            </p>
             {qrCode.pairingCode && (
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">Ou use o código de pareamento:</p>
