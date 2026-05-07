@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, CalendarIcon } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Loader2, CalendarIcon, Plus, UserPlus } from 'lucide-react';
 import { professionalsApi, servicesApi, clientsApi, appointmentsApi } from '@/lib/api';
 import type { Professional, Service, Client, TimeSlot } from '@/types';
 import { cn } from '@/lib/utils';
@@ -29,7 +30,13 @@ const appointmentSchema = z.object({
   notes: z.string().optional(),
 });
 
+const quickClientSchema = z.object({
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  phone: z.string().min(10, 'Telefone inválido'),
+});
+
 type AppointmentFormData = z.infer<typeof appointmentSchema>;
+type QuickClientFormData = z.infer<typeof quickClientSchema>;
 
 interface AppointmentFormProps {
   onSuccess: () => void;
@@ -37,44 +44,54 @@ interface AppointmentFormProps {
   appointmentId?: string;
 }
 
+// Helper function to extract array from API response
+function extractArrayFromResponse<T>(data: unknown): T[] {
+  console.log('[v0] extractArrayFromResponse received:', data);
+  if (Array.isArray(data)) {
+    console.log('[v0] Data is already an array with length:', data.length);
+    return data;
+  }
+  if (data && typeof data === 'object') {
+    // Check for 'items' property (paginated response)
+    if ('items' in data && Array.isArray((data as { items: T[] }).items)) {
+      console.log('[v0] Data has items property with length:', (data as { items: T[] }).items.length);
+      return (data as { items: T[] }).items;
+    }
+    // Check for 'data' property (nested response)
+    if ('data' in data && Array.isArray((data as { data: T[] }).data)) {
+      console.log('[v0] Data has data property with length:', (data as { data: T[] }).data.length);
+      return (data as { data: T[] }).data;
+    }
+  }
+  console.log('[v0] Could not extract array, returning empty array');
+  return [];
+}
+
 export function AppointmentForm({ onSuccess, initialDate, appointmentId }: AppointmentFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<string>('');
   const [selectedService, setSelectedService] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
+  const [isQuickClientOpen, setIsQuickClientOpen] = useState(false);
+  const [isCreatingClient, setIsCreatingClient] = useState(false);
 
-  const { data: professionalsData } = useSWR('professionals-form', () =>
-    professionalsApi.list({ active: true, limit: 100 }).then((res) => {
-      const data = res.data;
-      // Handle both array and paginated response formats
-      if (Array.isArray(data)) return data;
-      if (data && typeof data === 'object' && 'items' in data) return (data as { items: Professional[] }).items;
-      if (data && typeof data === 'object' && 'data' in data) return (data as { data: Professional[] }).data;
-      return [];
-    })
-  );
+  const { data: professionalsData, error: profError } = useSWR('professionals-form', async () => {
+    const res = await professionalsApi.list({ active: true, limit: 100 });
+    console.log('[v0] professionalsApi response:', res);
+    return extractArrayFromResponse<Professional>(res.data);
+  });
 
-  const { data: servicesData } = useSWR('services-form', () =>
-    servicesApi.list({ active: true, limit: 100 }).then((res) => {
-      const data = res.data;
-      // Handle both array and paginated response formats
-      if (Array.isArray(data)) return data;
-      if (data && typeof data === 'object' && 'items' in data) return (data as { items: Service[] }).items;
-      if (data && typeof data === 'object' && 'data' in data) return (data as { data: Service[] }).data;
-      return [];
-    })
-  );
+  const { data: servicesData, error: servError } = useSWR('services-form', async () => {
+    const res = await servicesApi.list({ active: true, limit: 100 });
+    console.log('[v0] servicesApi response:', res);
+    return extractArrayFromResponse<Service>(res.data);
+  });
 
-  const { data: clientsData } = useSWR('clients-form', () =>
-    clientsApi.list({ limit: 1000 }).then((res) => {
-      const data = res.data;
-      // Handle both array and paginated response formats
-      if (Array.isArray(data)) return data;
-      if (data && typeof data === 'object' && 'items' in data) return (data as { items: Client[] }).items;
-      if (data && typeof data === 'object' && 'data' in data) return (data as { data: Client[] }).data;
-      return [];
-    })
-  );
+  const { data: clientsData, error: clientError, mutate: mutateClients } = useSWR('clients-form', async () => {
+    const res = await clientsApi.list({ limit: 1000 });
+    console.log('[v0] clientsApi response:', res);
+    return extractArrayFromResponse<Client>(res.data);
+  });
 
   const { data: slotsData } = useSWR(
     selectedProfessional && selectedService && selectedDate
@@ -90,9 +107,17 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
         .then((res) => res.data)
   );
 
-  const professionals = professionalsData || [];
-  const services = servicesData || [];
-  const clients = clientsData || [];
+  // Debug errors
+  useEffect(() => {
+    if (profError) console.log('[v0] professionalsApi error:', profError);
+    if (servError) console.log('[v0] servicesApi error:', servError);
+    if (clientError) console.log('[v0] clientsApi error:', clientError);
+  }, [profError, servError, clientError]);
+
+  const professionals: Professional[] = professionalsData || [];
+  const services: Service[] = servicesData || [];
+  const clients: Client[] = clientsData || [];
+  
   // API returns slots as string array ["09:00", "09:30", ...], convert to TimeSlot format
   const rawSlots = slotsData?.slots || [];
   const slots: TimeSlot[] = Array.isArray(rawSlots) 
@@ -114,6 +139,15 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
     defaultValues: {
       date: initialDate,
     },
+  });
+
+  const {
+    register: registerQuickClient,
+    handleSubmit: handleSubmitQuickClient,
+    reset: resetQuickClient,
+    formState: { errors: quickClientErrors },
+  } = useForm<QuickClientFormData>({
+    resolver: zodResolver(quickClientSchema),
   });
 
   const watchedDate = watch('date');
@@ -150,11 +184,96 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
     }
   };
 
+  const onQuickClientSubmit = async (data: QuickClientFormData) => {
+    setIsCreatingClient(true);
+    try {
+      const result = await clientsApi.create({
+        name: data.name,
+        phone: data.phone,
+      });
+
+      if (result.success && result.data) {
+        toast.success('Cliente criado com sucesso!');
+        // Refresh clients list
+        await mutateClients();
+        // Select the new client
+        setValue('clientId', result.data.id);
+        // Close dialog and reset form
+        setIsQuickClientOpen(false);
+        resetQuickClient();
+      } else {
+        toast.error(result.error || 'Erro ao criar cliente');
+      }
+    } catch {
+      toast.error('Erro ao criar cliente');
+    } finally {
+      setIsCreatingClient(false);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {/* Client */}
       <div className="space-y-2">
-        <Label>Cliente</Label>
+        <div className="flex items-center justify-between">
+          <Label>Cliente</Label>
+          <Dialog open={isQuickClientOpen} onOpenChange={setIsQuickClientOpen}>
+            <DialogTrigger asChild>
+              <Button type="button" variant="ghost" size="sm" className="h-auto p-1 text-xs text-primary hover:text-primary/80">
+                <UserPlus className="mr-1 h-3 w-3" />
+                Novo Cliente
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[400px]">
+              <DialogHeader>
+                <DialogTitle>Cadastro Rápido de Cliente</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmitQuickClient(onQuickClientSubmit)} className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="quick-name">Nome *</Label>
+                  <Input
+                    id="quick-name"
+                    placeholder="Nome do cliente"
+                    {...registerQuickClient('name')}
+                    disabled={isCreatingClient}
+                  />
+                  {quickClientErrors.name && (
+                    <p className="text-sm text-destructive">{quickClientErrors.name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quick-phone">Telefone *</Label>
+                  <Input
+                    id="quick-phone"
+                    placeholder="(00) 00000-0000"
+                    {...registerQuickClient('phone')}
+                    disabled={isCreatingClient}
+                  />
+                  {quickClientErrors.phone && (
+                    <p className="text-sm text-destructive">{quickClientErrors.phone.message}</p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Você pode completar o cadastro do cliente posteriormente na seção de Clientes.
+                </p>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsQuickClientOpen(false)}
+                    disabled={isCreatingClient}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={isCreatingClient}>
+                    {isCreatingClient && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Criar Cliente
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
         <Select
           onValueChange={(value) => setValue('clientId', value)}
           disabled={isLoading}
@@ -163,11 +282,17 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
             <SelectValue placeholder="Selecione o cliente" />
           </SelectTrigger>
           <SelectContent>
-            {clients.map((client: Client) => (
-              <SelectItem key={client.id} value={client.id}>
-                {client.name} {client.phone && `- ${client.phone}`}
-              </SelectItem>
-            ))}
+            {clients.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Nenhum cliente encontrado
+              </div>
+            ) : (
+              clients.map((client: Client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.name} {client.phone && `- ${client.phone}`}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         {errors.clientId && (
@@ -190,11 +315,17 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
             <SelectValue placeholder="Selecione o profissional" />
           </SelectTrigger>
           <SelectContent>
-            {professionals.map((pro: Professional) => (
-              <SelectItem key={pro.id} value={pro.id}>
-                {pro.name}
-              </SelectItem>
-            ))}
+            {professionals.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Nenhum profissional encontrado
+              </div>
+            ) : (
+              professionals.map((pro: Professional) => (
+                <SelectItem key={pro.id} value={pro.id}>
+                  {pro.name}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         {errors.professionalId && (
@@ -217,14 +348,20 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
             <SelectValue placeholder="Selecione o serviço" />
           </SelectTrigger>
           <SelectContent>
-            {services.map((service: Service) => (
-              <SelectItem key={service.id} value={service.id}>
-                {service.name} - {service.duration}min -{' '}
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                  service.price
-                )}
-              </SelectItem>
-            ))}
+            {services.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Nenhum serviço encontrado
+              </div>
+            ) : (
+              services.map((service: Service) => (
+                <SelectItem key={service.id} value={service.id}>
+                  {service.name} - {service.duration}min -{' '}
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                    Number(service.price)
+                  )}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         {errors.serviceId && (
