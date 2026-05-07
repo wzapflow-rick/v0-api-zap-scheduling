@@ -20,7 +20,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   GripVertical, 
   ArrowRight, 
@@ -247,37 +246,38 @@ export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesC
               items={availableMessages.map(m => m.id)}
               strategy={verticalListSortingStrategy}
             >
-              <ScrollArea className="h-80">
-                <div className="space-y-2 pr-4">
-                  {availableMessages.map((message) => (
-                    <div key={message.id} className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <MessageCard
-                          message={message}
-                          isActive={false}
-                          isDisabled={isAtLimit}
-                          isSelected={selectedMessageId === message.id}
-                          onClick={() => setSelectedMessageId(message.id)}
-                        />
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
-                        onClick={() => activateMessage(message.id)}
-                        disabled={isAtLimit}
-                      >
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
+              <div className={cn(
+                "max-h-80 space-y-2 overflow-y-auto pr-2",
+                activeId && "overflow-hidden"
+              )}>
+                {availableMessages.map((message) => (
+                  <div key={message.id} className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <MessageCard
+                        message={message}
+                        isActive={false}
+                        isDisabled={isAtLimit}
+                        isSelected={selectedMessageId === message.id}
+                        onClick={() => setSelectedMessageId(message.id)}
+                      />
                     </div>
-                  ))}
-                  {availableMessages.length === 0 && (
-                    <p className="py-8 text-center text-sm text-muted-foreground">
-                      Todas as mensagens estão ativas
-                    </p>
-                  )}
-                </div>
-              </ScrollArea>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => activateMessage(message.id)}
+                      disabled={isAtLimit}
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                {availableMessages.length === 0 && (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Todas as mensagens estão ativas
+                  </p>
+                )}
+              </div>
             </SortableContext>
           </CardContent>
         </Card>
@@ -312,41 +312,42 @@ export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesC
               items={activeMessages.map(m => m.id)}
               strategy={verticalListSortingStrategy}
             >
-              <ScrollArea className="h-80">
-                <div className="space-y-2 pr-4">
-                  {activeMessages.map((message) => (
-                    <div key={message.id} className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
-                        onClick={() => deactivateMessage(message.id)}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <div className="flex-1">
-                        <MessageCard
-                          message={message}
-                          isActive={true}
-                          isSelected={selectedMessageId === message.id}
-                          onClick={() => setSelectedMessageId(message.id)}
-                        />
-                      </div>
+              <div className={cn(
+                "max-h-80 space-y-2 overflow-y-auto pr-2",
+                activeId && "overflow-hidden"
+              )}>
+                {activeMessages.map((message) => (
+                  <div key={message.id} className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => deactivateMessage(message.id)}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex-1">
+                      <MessageCard
+                        message={message}
+                        isActive={true}
+                        isSelected={selectedMessageId === message.id}
+                        onClick={() => setSelectedMessageId(message.id)}
+                      />
                     </div>
-                  ))}
-                  {activeMessages.length === 0 && (
-                    <div className="flex h-32 flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 text-center">
-                      <MessageSquare className="h-8 w-8 text-muted-foreground/30" />
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Nenhuma mensagem ativa
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Arraste mensagens aqui
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
+                  </div>
+                ))}
+                {activeMessages.length === 0 && (
+                  <div className="flex h-32 flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 text-center">
+                    <MessageSquare className="h-8 w-8 text-muted-foreground/30" />
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Nenhuma mensagem ativa
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Arraste mensagens aqui
+                    </p>
+                  </div>
+                )}
+              </div>
             </SortableContext>
           </CardContent>
         </Card>
