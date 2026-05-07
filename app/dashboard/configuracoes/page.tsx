@@ -113,9 +113,6 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => {
     if (establishment) {
-      console.log('[v0] Establishment data loaded:', establishment);
-      console.log('[v0] Raw businessHours from API:', (establishment as any).businessHours);
-      
       reset({
         name: establishment.name,
         description: establishment.description || '',
@@ -142,7 +139,6 @@ export default function ConfiguracoesPage() {
           convertedHours[day.key] = { enabled: false, open: '09:00', close: '18:00' };
         }
       });
-      console.log('[v0] Converted businessHours for UI:', convertedHours);
       setBusinessHours(convertedHours);
     }
   }, [establishment, reset]);
@@ -186,25 +182,17 @@ export default function ConfiguracoesPage() {
       });
       
       // Also send as workingHours for backend compatibility
-      // The backend may expect workingHours instead of businessHours
       payload.workingHours = payload.businessHours;
-
-      console.log('[v0] Sending payload to API:', JSON.stringify(payload, null, 2));
       
       const result = await establishmentApi.update(payload);
-      
-      console.log('[v0] API response:', JSON.stringify(result, null, 2));
 
       if (result.success) {
         toast.success('Configurações salvas!');
-        // Force revalidation and update the cache with fresh data
         await mutate(undefined, { revalidate: true });
-        console.log('[v0] Data revalidated after save');
       } else {
         toast.error(result.error || 'Erro ao salvar configurações');
       }
-    } catch (err) {
-      console.error('[v0] Error saving:', err);
+    } catch {
       toast.error('Erro ao salvar configurações');
     } finally {
       setIsLoading(false);

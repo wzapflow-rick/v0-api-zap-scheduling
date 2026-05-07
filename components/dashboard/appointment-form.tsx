@@ -72,7 +72,15 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
   const professionals = professionalsData || [];
   const services = servicesData || [];
   const clients = clientsData || [];
-  const slots = slotsData?.slots || [];
+  // API returns slots as string array ["09:00", "09:30", ...], convert to TimeSlot format
+  const rawSlots = slotsData?.slots || [];
+  const slots: TimeSlot[] = Array.isArray(rawSlots) 
+    ? rawSlots.map((slot: string | TimeSlot) => 
+        typeof slot === 'string' 
+          ? { time: slot, available: true } 
+          : slot
+      )
+    : [];
 
   const {
     register,

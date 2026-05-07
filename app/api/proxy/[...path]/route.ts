@@ -73,11 +73,6 @@ async function handleProxy(
     }
   }
 
-  console.log('[v0] Proxy request:', targetUrl, 'method:', request.method, 'token exists:', !!token);
-  if (body) {
-    console.log('[v0] Request body being sent to backend:', body);
-  }
-
   try {
     const response = await fetch(targetUrl, {
       method: request.method,
@@ -87,16 +82,10 @@ async function handleProxy(
 
     const data = await response.json();
     
-    // Log errors from backend for debugging
-    if (!response.ok) {
-      console.log('[v0] Backend error:', response.status, data);
-    }
-
     return NextResponse.json(data, {
       status: response.status,
     });
-  } catch (error) {
-    console.error('[v0] Proxy error:', error);
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Erro ao conectar com o servidor' },
       { status: 500 }

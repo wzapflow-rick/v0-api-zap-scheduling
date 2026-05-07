@@ -257,17 +257,13 @@ export default function AgendamentosPage() {
                       {format(day, 'd')}
                     </span>
                     {dayAppointments.length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-0.5">
-                        {dayAppointments.slice(0, 3).map((apt: Appointment) => (
-                          <div
-                            key={apt.id}
-                            className={cn('h-1.5 w-1.5 rounded-full', statusColors[apt.status])}
-                            title={`${apt.startTime} - ${apt.client.name}`}
-                          />
-                        ))}
-                        {dayAppointments.length > 3 && (
-                          <span className="text-[10px] text-muted-foreground">+{dayAppointments.length - 3}</span>
-                        )}
+                      <div className="mt-auto flex w-full items-center justify-center">
+                        <span className={cn(
+                          'flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-medium',
+                          'bg-primary text-primary-foreground'
+                        )}>
+                          {dayAppointments.length}
+                        </span>
                       </div>
                     )}
                   </button>
