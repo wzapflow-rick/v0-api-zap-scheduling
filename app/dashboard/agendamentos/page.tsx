@@ -43,24 +43,18 @@ const appointmentsFetcher = async (key: [string, string, string, string, string]
     professionalId: professionalFilter !== 'all' ? professionalFilter : undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
   });
-  console.log('[v0] Full API response:', JSON.stringify(res, null, 2));
   if (!res.success) {
-    console.log('[v0] API failed, success=false');
     return [];
   }
   // API returns { success: true, data: { appointments: [...] } }
   // Handle both formats: direct array or nested in appointments property
   const data = res.data as any;
-  console.log('[v0] res.data:', JSON.stringify(data, null, 2));
   if (Array.isArray(data)) {
-    console.log('[v0] data is array, length:', data.length);
     return data;
   }
   if (data?.appointments && Array.isArray(data.appointments)) {
-    console.log('[v0] data.appointments is array, length:', data.appointments.length);
     return data.appointments;
   }
-  console.log('[v0] No appointments found in response');
   return [];
 };
 
@@ -127,7 +121,8 @@ export default function AgendamentosPage() {
   const appointmentsByDate = useMemo(() => {
     const grouped: Record<string, Appointment[]> = {};
     appointments.forEach((apt: Appointment) => {
-      const dateKey = apt.date;
+      // Normalize date to yyyy-MM-dd format (API returns ISO timestamp like "2026-05-09T00:00:00.000Z")
+      const dateKey = apt.date.split('T')[0];
       if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push(apt);
     });
@@ -313,7 +308,15 @@ export default function AgendamentosPage() {
                 <div className="space-y-3">
                   {selectedDayAppointments
                     .sort((a: Appointment, b: Appointment) => a.startTime.localeCompare(b.startTime))
-                    .map((apt: Appointment) => (
+                    .map((apt: Appointment) => {
+                      // Format time from ISO timestamp ("1970-01-01T12:00:00.000Z") to "HH:mm"
+                      const formatTime = (time: string) => {
+                        if (time.includes('T')) {
+                          return time.split('T')[1].substring(0, 5);
+                        }
+                        return time;
+                      };
+                      return (
                       <Link
                         key={apt.id}
                         href={`/dashboard/agendamentos/${apt.id}`}
@@ -322,7 +325,7 @@ export default function AgendamentosPage() {
                         <div className="mb-2 flex items-center justify-between">
                           <span className="flex items-center gap-1 text-sm font-medium">
                             <Clock className="h-3 w-3" />
-                            {apt.startTime} - {apt.endTime}
+                            {formatTime(apt.startTime)} - {formatTime(apt.endTime)}
                           </span>
                           <Badge className={cn('text-xs', statusColors[apt.status])}>
                             {statusLabels[apt.status]}
@@ -335,7 +338,7 @@ export default function AgendamentosPage() {
                           {apt.professional.name}
                         </p>
                       </Link>
-                    ))}
+                    );})}
                 </div>
               ) : (
                 <div className="py-8 text-center">
