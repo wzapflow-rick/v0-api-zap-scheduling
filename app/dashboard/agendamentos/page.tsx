@@ -43,18 +43,24 @@ const appointmentsFetcher = async (key: [string, string, string, string, string]
     professionalId: professionalFilter !== 'all' ? professionalFilter : undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
   });
+  console.log('[v0] Full API response:', JSON.stringify(res, null, 2));
   if (!res.success) {
+    console.log('[v0] API failed, success=false');
     return [];
   }
   // API returns { success: true, data: { appointments: [...] } }
   // Handle both formats: direct array or nested in appointments property
   const data = res.data as any;
+  console.log('[v0] res.data:', JSON.stringify(data, null, 2));
   if (Array.isArray(data)) {
+    console.log('[v0] data is array, length:', data.length);
     return data;
   }
   if (data?.appointments && Array.isArray(data.appointments)) {
+    console.log('[v0] data.appointments is array, length:', data.appointments.length);
     return data.appointments;
   }
+  console.log('[v0] No appointments found in response');
   return [];
 };
 
