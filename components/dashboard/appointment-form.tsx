@@ -46,24 +46,25 @@ interface AppointmentFormProps {
 
 // Helper function to extract array from API response
 function extractArrayFromResponse<T>(data: unknown): T[] {
-  console.log('[v0] extractArrayFromResponse received:', data);
   if (Array.isArray(data)) {
-    console.log('[v0] Data is already an array with length:', data.length);
     return data;
   }
   if (data && typeof data === 'object') {
-    // Check for 'items' property (paginated response)
-    if ('items' in data && Array.isArray((data as { items: T[] }).items)) {
-      console.log('[v0] Data has items property with length:', (data as { items: T[] }).items.length);
-      return (data as { items: T[] }).items;
+    const obj = data as Record<string, unknown>;
+    // Check for specific API response properties (professionals, services, clients, etc.)
+    const knownArrayProps = ['professionals', 'services', 'clients', 'appointments', 'items', 'data'];
+    for (const prop of knownArrayProps) {
+      if (prop in obj && Array.isArray(obj[prop])) {
+        return obj[prop] as T[];
+      }
     }
-    // Check for 'data' property (nested response)
-    if ('data' in data && Array.isArray((data as { data: T[] }).data)) {
-      console.log('[v0] Data has data property with length:', (data as { data: T[] }).data.length);
-      return (data as { data: T[] }).data;
+    // Fallback: find any array property in the object
+    for (const key of Object.keys(obj)) {
+      if (Array.isArray(obj[key])) {
+        return obj[key] as T[];
+      }
     }
   }
-  console.log('[v0] Could not extract array, returning empty array');
   return [];
 }
 
@@ -77,19 +78,16 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
 
   const { data: professionalsData, error: profError } = useSWR('professionals-form', async () => {
     const res = await professionalsApi.list({ active: true, limit: 100 });
-    console.log('[v0] professionalsApi response:', res);
     return extractArrayFromResponse<Professional>(res.data);
   });
 
   const { data: servicesData, error: servError } = useSWR('services-form', async () => {
     const res = await servicesApi.list({ active: true, limit: 100 });
-    console.log('[v0] servicesApi response:', res);
     return extractArrayFromResponse<Service>(res.data);
   });
 
   const { data: clientsData, error: clientError, mutate: mutateClients } = useSWR('clients-form', async () => {
     const res = await clientsApi.list({ limit: 1000 });
-    console.log('[v0] clientsApi response:', res);
     return extractArrayFromResponse<Client>(res.data);
   });
 
@@ -107,12 +105,7 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
         .then((res) => res.data)
   );
 
-  // Debug errors
-  useEffect(() => {
-    if (profError) console.log('[v0] professionalsApi error:', profError);
-    if (servError) console.log('[v0] servicesApi error:', servError);
-    if (clientError) console.log('[v0] clientsApi error:', clientError);
-  }, [profError, servError, clientError]);
+
 
   const professionals: Professional[] = professionalsData || [];
   const services: Service[] = servicesData || [];
@@ -187,9 +180,12 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
   const onQuickClientSubmit = async (data: QuickClientFormData) => {
     setIsCreatingClient(true);
     try {
+      // Generate a placeholder email using phone number to ensure uniqueness
+      const placeholderEmail = `${data.phone.replace(/\D/g, '')}@temp.agendamento.com`;
       const result = await clientsApi.create({
         name: data.name,
         phone: data.phone,
+        email: placeholderEmail,
       });
 
       if (result.success && result.data) {
