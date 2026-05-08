@@ -133,7 +133,7 @@ export async function logoutInstance(instanceName: string) {
   });
 }
 
-// Message Sending (for future use by backend)
+// Message Sending
 
 export async function sendTextMessage(
   instanceName: string,
@@ -148,3 +148,14 @@ export async function sendTextMessage(
     }),
   });
 }
+
+// Export as object for easier imports
+export const evolutionApi = {
+  createInstance,
+  connectInstance,
+  getInstanceStatus,
+  getInstanceInfo,
+  deleteInstance,
+  logoutInstance,
+  sendTextMessage,
+};

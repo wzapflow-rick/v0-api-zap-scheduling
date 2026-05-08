@@ -20,6 +20,8 @@ import { Loader2, CalendarIcon, Plus, UserPlus } from 'lucide-react';
 import { professionalsApi, servicesApi, clientsApi, appointmentsApi } from '@/lib/api';
 import type { Professional, Service, Client, TimeSlot } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAutoMessage } from '@/hooks/use-auto-message';
+import { useAutoMessagesConfig } from '@/contexts/auto-messages-context';
 
 const appointmentSchema = z.object({
   clientId: z.string().min(1, 'Cliente é obrigatório'),
@@ -75,6 +77,10 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
   const [isQuickClientOpen, setIsQuickClientOpen] = useState(false);
   const [isCreatingClient, setIsCreatingClient] = useState(false);
+
+  // Auto message hooks
+  const { sendMessage } = useAutoMessage();
+  const { canSendMessage, instanceName } = useAutoMessagesConfig();
 
   const { data: professionalsData, error: profError } = useSWR('professionals-form', async () => {
     const res = await professionalsApi.list({ active: true, limit: 100 });
@@ -166,6 +172,30 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
 
       if (result.success) {
         toast.success(appointmentId ? 'Agendamento atualizado!' : 'Agendamento criado!');
+        
+        // Send confirmation message for new appointments only
+        if (!appointmentId && canSendMessage('confirmation') && instanceName) {
+          const selectedClient = clients.find(c => c.id === data.clientId);
+          const selectedProf = professionals.find(p => p.id === data.professionalId);
+          const selectedServ = services.find(s => s.id === data.serviceId);
+          
+          if (selectedClient?.phone) {
+            await sendMessage({
+              messageType: 'confirmation',
+              instanceName,
+              appointmentData: {
+                clientName: selectedClient.name,
+                clientPhone: selectedClient.phone,
+                date: format(data.date, 'dd/MM/yyyy'),
+                time: data.startTime,
+                serviceName: selectedServ?.name || 'Serviço',
+                professionalName: selectedProf?.name || 'Profissional',
+              },
+              silent: true, // Don't show extra toast, the success toast is enough
+            });
+          }
+        }
+        
         onSuccess();
       } else {
         toast.error(result.error || 'Erro ao salvar agendamento');
