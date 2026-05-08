@@ -1,34 +1,42 @@
 // Evolution API Client
 // Server-side only - never expose API key to client
 
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
-
 interface EvolutionResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
 }
 
+// Helper to get env vars at runtime (not at module load time)
+function getEvolutionConfig() {
+  return {
+    apiUrl: process.env.EVOLUTION_API_URL,
+    apiKey: process.env.EVOLUTION_API_KEY,
+  };
+}
+
 async function evolutionFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<EvolutionResponse<T>> {
-  if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+  const { apiUrl, apiKey } = getEvolutionConfig();
+  
+  if (!apiUrl || !apiKey) {
+    console.log('[v0] Evolution API config missing:', { apiUrl: !!apiUrl, apiKey: !!apiKey });
     return {
       success: false,
-      error: 'Evolution API não configurada. Verifique as variáveis de ambiente.',
+      error: 'Evolution API não configurada. Verifique as variáveis de ambiente EVOLUTION_API_URL e EVOLUTION_API_KEY.',
     };
   }
 
   try {
-    const url = `${EVOLUTION_API_URL}${endpoint}`;
+    const url = `${apiUrl}${endpoint}`;
     
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'apikey': EVOLUTION_API_KEY,
+        'apikey': apiKey,
         ...options.headers,
       },
     });
