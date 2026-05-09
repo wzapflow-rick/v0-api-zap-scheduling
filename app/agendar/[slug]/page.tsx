@@ -131,6 +131,30 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
       if (result.success) {
         setBookingComplete(true);
         toast.success('Agendamento realizado com sucesso!');
+        
+        // Send WhatsApp confirmation message
+        try {
+          const instanceName = `ZapFlow-Agenda_${slug}`;
+          await fetch('/api/messages/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messageType: 'confirmation',
+              instanceName,
+              appointmentData: {
+                clientName: data.clientName,
+                clientPhone: data.clientPhone,
+                date: format(selectedDate, 'dd/MM/yyyy'),
+                time: selectedTime,
+                serviceName: selectedService.name,
+                professionalName: selectedProfessional.name,
+              },
+            }),
+          });
+        } catch (msgError) {
+          // Silently fail - don't break the booking flow if message fails
+          console.error('[v0] Erro ao enviar mensagem WhatsApp:', msgError);
+        }
       } else {
         toast.error(result.error || 'Erro ao realizar agendamento');
       }
