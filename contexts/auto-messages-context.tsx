@@ -70,6 +70,16 @@ export function AutoMessagesProvider({ children, slug }: { children: ReactNode; 
   }, [fetchConfig]);
 
   const canSendMessage = useCallback((messageType: string): boolean => {
+    console.log('[v0] canSendMessage check:', {
+      messageType,
+      USE_BACKEND_MESSAGES,
+      hasConfig: !!config,
+      whatsappConnected: config?.whatsappConnected,
+      activeMessages: config?.activeMessages,
+      includesMessageType: config?.activeMessages?.includes(messageType),
+      instanceName: config?.whatsappInstanceName,
+    });
+    
     if (USE_BACKEND_MESSAGES) return false; // Backend handles it
     if (!config) return false;
     if (!config.whatsappConnected) return false;
