@@ -158,6 +158,7 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
   }, [watchedDate]);
 
   const onSubmit = async (data: AppointmentFormData) => {
+    console.log('[v0] onSubmit chamado - dados:', data);
     setIsLoading(true);
     try {
       const result = appointmentId
