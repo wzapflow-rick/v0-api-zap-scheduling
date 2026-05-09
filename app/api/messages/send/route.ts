@@ -67,12 +67,25 @@ export async function POST(request: Request) {
     // Format phone number
     const formattedPhone = formatPhoneForWhatsApp(appointmentData.clientPhone);
 
+    console.log('[v0] Enviando mensagem WhatsApp:', {
+      instanceName,
+      to: formattedPhone,
+      messageType,
+      messageLength: messageContent.length,
+    });
+
     // Send via Evolution API
     const result = await evolutionApi.sendTextMessage(
       instanceName,
       formattedPhone,
       messageContent
     );
+
+    console.log('[v0] Resultado envio Evolution:', {
+      success: result.success,
+      error: result.error,
+      data: result.data ? 'presente' : 'ausente',
+    });
 
     if (!result.success) {
       console.error('[v0] Erro ao enviar mensagem:', result.error);

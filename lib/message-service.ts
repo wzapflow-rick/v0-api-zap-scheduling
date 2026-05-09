@@ -121,17 +121,13 @@ export function getTemplate(trigger: MessageTemplate['trigger']): MessageTemplat
 
 export function formatPhoneForWhatsApp(phone: string): string {
   // Remove all non-numeric characters
-  const numbers = phone.replace(/\D/g, '');
-  
-  // If already has country code (55 for Brazil), return as is
-  if (numbers.startsWith('55') && numbers.length >= 12) {
-    return numbers;
-  }
+  let numbers = phone.replace(/\D/g, '');
   
   // Add Brazil country code if not present
   if (numbers.length === 10 || numbers.length === 11) {
-    return `55${numbers}`;
+    numbers = `55${numbers}`;
   }
   
-  return numbers;
+  // Evolution API requires the format: 5511999999999@s.whatsapp.net
+  return `${numbers}@s.whatsapp.net`;
 }
