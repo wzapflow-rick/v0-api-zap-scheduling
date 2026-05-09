@@ -3,7 +3,7 @@
 // When backend is ready, set USE_BACKEND_MESSAGES = true to disable frontend sending
 
 // Toggle this to switch between frontend and backend message sending
-export const USE_BACKEND_MESSAGES = false;
+export const USE_BACKEND_MESSAGES = true;
 
 export interface MessageTemplate {
   id: string;
