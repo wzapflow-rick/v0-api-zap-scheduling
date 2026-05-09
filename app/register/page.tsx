@@ -16,7 +16,7 @@ import { useAuth } from '@/lib/auth-context';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('E-mail inválido'),
+  email: z.string().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
   phone: z.string().min(10, 'Telefone inválido'),
   establishmentName: z.string().min(2, 'Nome do estabelecimento é obrigatório'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
