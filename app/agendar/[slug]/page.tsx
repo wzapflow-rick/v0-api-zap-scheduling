@@ -228,55 +228,55 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
       <header className="border-b bg-background">
-        <div className="container mx-auto max-w-4xl px-4 py-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="bg-primary text-xl text-primary-foreground">
+        <div className="container mx-auto max-w-4xl px-4 py-4 sm:py-6">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Avatar className="h-12 w-12 sm:h-16 sm:w-16 shrink-0">
+              <AvatarFallback className="bg-primary text-lg sm:text-xl text-primary-foreground">
                 {getInitials(establishment.name)}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">{establishment.name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">{establishment.name}</h1>
               {establishment.address && (
-                <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  {establishment.address}, {establishment.city}
+                <p className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{establishment.address}, {establishment.city}</span>
                 </p>
               )}
               {establishment.phone && (
-                <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Phone className="h-3 w-3" />
+                <p className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+                  <Phone className="h-3 w-3 shrink-0" />
                   {establishment.phone}
                 </p>
               )}
             </div>
           </div>
           {establishment.description && (
-            <p className="mt-4 text-muted-foreground">{establishment.description}</p>
+            <p className="mt-3 sm:mt-4 text-sm sm:text-base text-muted-foreground">{establishment.description}</p>
           )}
         </div>
       </header>
 
       {/* Progress Steps */}
       <div className="border-b bg-background">
-        <div className="container mx-auto max-w-4xl px-4 py-4">
-          <div className="flex items-center justify-center gap-2">
+        <div className="container mx-auto max-w-4xl px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-center gap-1 sm:gap-2">
             {[1, 2, 3, 4].map((s) => (
               <div key={s} className="flex items-center">
                 <div
                   className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium',
+                    'flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs sm:text-sm font-medium transition-colors',
                     step >= s
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-muted-foreground'
                   )}
                 >
-                  {step > s ? <Check className="h-4 w-4" /> : s}
+                  {step > s ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> : s}
                 </div>
                 {s < 4 && (
                   <div
                     className={cn(
-                      'mx-2 h-0.5 w-8',
+                      'mx-1 sm:mx-2 h-0.5 w-4 sm:w-8 transition-colors',
                       step > s ? 'bg-primary' : 'bg-muted'
                     )}
                   />
@@ -284,7 +284,7 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
               </div>
             ))}
           </div>
-          <div className="mt-2 flex justify-center gap-4 text-xs text-muted-foreground">
+          <div className="mt-2 flex justify-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-muted-foreground">
             <span>Serviço</span>
             <span>Profissional</span>
             <span>Data/Hora</span>
@@ -436,7 +436,7 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
                 <Label className="mb-3 block">Horário</Label>
                 {slots.length > 0 ? (
                   filteredSlots.length > 0 ? (
-                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
                       {filteredSlots.map((slot: TimeSlot) => (
                         <Button
                           key={slot.time}

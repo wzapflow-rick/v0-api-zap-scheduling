@@ -226,35 +226,28 @@ export default function ClientesPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Agendamentos</TableHead>
-                  <TableHead>Cadastro</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: Cards */}
+              <div className="space-y-3 md:hidden">
                 {clients.map((client: Client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell>{client.phone || '-'}</TableCell>
-                    <TableCell>{client.email || '-'}</TableCell>
-                    <TableCell>{client._count?.appointments || 0}</TableCell>
-                    <TableCell>
-                      {format(new Date(client.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => openEditForm(client)}>
+                  <div key={client.id} className="rounded-lg border bg-card p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <p className="font-medium">{client.name}</p>
+                        {client.phone && (
+                          <p className="text-sm text-muted-foreground">{client.phone}</p>
+                        )}
+                        {client.email && (
+                          <p className="text-sm text-muted-foreground truncate max-w-[200px]">{client.email}</p>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditForm(client)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </AlertDialogTrigger>
@@ -274,11 +267,72 @@ export default function ClientesPage() {
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>{client._count?.appointments || 0} agendamentos</span>
+                      <span>Desde {format(new Date(client.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+              
+              {/* Desktop: Table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>Agendamentos</TableHead>
+                      <TableHead>Cadastro</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {clients.map((client: Client) => (
+                      <TableRow key={client.id}>
+                        <TableCell className="font-medium">{client.name}</TableCell>
+                        <TableCell>{client.phone || '-'}</TableCell>
+                        <TableCell>{client.email || '-'}</TableCell>
+                        <TableCell>{client._count?.appointments || 0}</TableCell>
+                        <TableCell>
+                          {format(new Date(client.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => openEditForm(client)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remover cliente?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação não pode ser desfeita. O cliente será removido permanentemente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(client.id)}>
+                                    Remover
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

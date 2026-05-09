@@ -50,7 +50,11 @@ const sidebarLinks = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onLinkClick?: () => void;
+}
+
+export function Sidebar({ onLinkClick }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -89,8 +93,9 @@ export function Sidebar() {
             <Link
               key={link.href}
               href={link.href}
+              onClick={onLinkClick}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors min-h-[44px]',
                 isActive
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'

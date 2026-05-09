@@ -48,18 +48,13 @@ export default function DashboardLayout({
         
         {/* Mobile Sidebar */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild className="lg:hidden">
-            <Button variant="ghost" size="icon" className="fixed left-4 top-4 z-50">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
-            <Sidebar />
+            <Sidebar onLinkClick={() => setMobileOpen(false)} />
           </SheetContent>
         </Sheet>
         
         <div className="lg:pl-64 transition-all duration-300">
-          <DashboardHeader />
+          <DashboardHeader onMenuClick={() => setMobileOpen(true)} />
           <main className="p-4 lg:p-6">{children}</main>
         </div>
       </div>

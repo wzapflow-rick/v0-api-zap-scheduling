@@ -206,9 +206,9 @@ export default function AgendamentosPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
         <Select value={professionalFilter} onValueChange={setProfessionalFilter}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Profissional" />
           </SelectTrigger>
           <SelectContent>
@@ -220,7 +220,7 @@ export default function AgendamentosPage() {
         </Select>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -237,16 +237,16 @@ export default function AgendamentosPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Calendar */}
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle>{format(currentDate, 'MMMM yyyy', { locale: ptBR })}</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+          <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="capitalize">{format(currentDate, 'MMMM yyyy', { locale: ptBR })}</CardTitle>
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
+              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
                 Hoje
               </Button>
-              <Button variant="outline" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -254,9 +254,10 @@ export default function AgendamentosPage() {
           <CardContent>
             {/* Weekday headers */}
             <div className="mb-2 grid grid-cols-7 gap-1">
-              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-                <div key={day} className="py-2 text-center text-sm font-medium text-muted-foreground">
-                  {day}
+              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, i) => (
+                <div key={i} className="py-2 text-center text-xs sm:text-sm font-medium text-muted-foreground">
+                  <span className="sm:hidden">{day}</span>
+                  <span className="hidden sm:inline">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][i]}</span>
                 </div>
               ))}
             </div>
@@ -275,7 +276,7 @@ export default function AgendamentosPage() {
                     key={dateKey}
                     onClick={() => setSelectedDate(day)}
                     className={cn(
-                      'relative flex min-h-[80px] flex-col items-start rounded-lg border p-2 text-left transition-colors',
+                      'relative flex min-h-[60px] sm:min-h-[80px] flex-col items-start rounded-lg border p-1 sm:p-2 text-left transition-colors',
                       isCurrentMonth ? 'bg-card' : 'bg-muted/30',
                       isSelected && 'border-primary ring-1 ring-primary',
                       !isSelected && 'border-border hover:border-primary/50',
