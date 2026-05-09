@@ -174,12 +174,26 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
         toast.success(appointmentId ? 'Agendamento atualizado!' : 'Agendamento criado!');
         
         // Send confirmation message for new appointments only
+        console.log('[v0] Verificando envio de mensagem:', {
+          isNewAppointment: !appointmentId,
+          canSendConfirmation: canSendMessage('confirmation'),
+          hasInstanceName: !!instanceName,
+          instanceName,
+        });
+        
         if (!appointmentId && canSendMessage('confirmation') && instanceName) {
           const selectedClient = clients.find(c => c.id === data.clientId);
           const selectedProf = professionals.find(p => p.id === data.professionalId);
           const selectedServ = services.find(s => s.id === data.serviceId);
           
+          console.log('[v0] Cliente selecionado:', {
+            clientId: data.clientId,
+            clientFound: !!selectedClient,
+            clientPhone: selectedClient?.phone,
+          });
+          
           if (selectedClient?.phone) {
+            console.log('[v0] Enviando mensagem de confirmação...');
             await sendMessage({
               messageType: 'confirmation',
               instanceName,
@@ -193,7 +207,12 @@ export function AppointmentForm({ onSuccess, initialDate, appointmentId }: Appoi
               },
               silent: true, // Don't show extra toast, the success toast is enough
             });
+            console.log('[v0] Mensagem de confirmação enviada!');
+          } else {
+            console.log('[v0] Cliente não tem telefone, pulando envio');
           }
+        } else {
+          console.log('[v0] Condições não atendidas para envio de mensagem');
         }
         
         onSuccess();
