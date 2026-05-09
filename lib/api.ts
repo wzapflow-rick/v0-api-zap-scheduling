@@ -99,6 +99,24 @@ export const authApi = {
     }),
 
   me: () => apiFetch<User>('/auth/me'),
+
+  forgotPassword: (phone: string) =>
+    apiFetch<{ message: string; sent: boolean }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    }),
+
+  verifyResetToken: (phone: string, code: string) =>
+    apiFetch<{ valid: boolean }>('/auth/verify-reset-token', {
+      method: 'POST',
+      body: JSON.stringify({ phone, code }),
+    }),
+
+  resetPassword: (phone: string, code: string, password: string) =>
+    apiFetch<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ phone, code, password }),
+    }),
 };
 
 // Establishment API
