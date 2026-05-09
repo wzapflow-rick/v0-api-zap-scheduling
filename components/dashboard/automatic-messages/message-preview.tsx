@@ -1,11 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MessageSquare, Gift, UserX, Users, XCircle, ListTodo, Megaphone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Calendar, Clock, MessageSquare, Gift, UserX, Users, XCircle, ListTodo, Megaphone, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { AutomaticMessage, getMessagePreview } from '@/types/evolution';
+import { toast } from 'sonner';
 
 interface MessagePreviewProps {
   message: AutomaticMessage;
+  instanceName?: string | null;
+  whatsappConnected?: boolean;
 }
 
 const triggerLabels: Record<string, string> = {
@@ -33,8 +40,63 @@ const categoryLabels: Record<string, string> = {
   marketing: 'Marketing',
 };
 
-export function MessagePreview({ message }: MessagePreviewProps) {
+export function MessagePreview({ message, instanceName, whatsappConnected }: MessagePreviewProps) {
   const preview = getMessagePreview(message);
+  const [testPhone, setTestPhone] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  const handleSendTest = async () => {
+    if (!testPhone.trim()) {
+      toast.error('Digite um número de telefone para teste');
+      return;
+    }
+
+    if (!instanceName) {
+      toast.error('WhatsApp não está conectado');
+      return;
+    }
+
+    setIsSending(true);
+    setSendStatus('idle');
+
+    try {
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messageType: message.trigger === 'appointment_created' ? 'confirmation' : 
+                       message.trigger === 'reminder_24h' ? 'reminder_24h' :
+                       message.trigger === 'reminder_1h' ? 'reminder_1h' :
+                       message.trigger === 'appointment_cancelled' ? 'cancellation' : 'confirmation',
+          instanceName,
+          appointmentData: {
+            clientName: 'Cliente Teste',
+            clientPhone: testPhone.replace(/\D/g, ''),
+            date: new Date().toLocaleDateString('pt-BR'),
+            time: '14:00',
+            serviceName: 'Serviço Exemplo',
+            professionalName: 'Profissional Exemplo',
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSendStatus('success');
+        toast.success('Mensagem de teste enviada com sucesso!');
+      } else {
+        setSendStatus('error');
+        toast.error(result.error || 'Erro ao enviar mensagem de teste');
+      }
+    } catch (error) {
+      setSendStatus('error');
+      toast.error('Erro ao enviar mensagem de teste');
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -85,6 +147,71 @@ export function MessagePreview({ message }: MessagePreviewProps) {
             </code>
           ))}
         </div>
+      </div>
+
+      {/* Test Message Section */}
+      <div className="mt-6 space-y-3 border-t pt-4">
+        <div className="flex items-center gap-2">
+          <Send className="h-4 w-4 text-primary" />
+          <p className="text-sm font-medium">Enviar Mensagem de Teste</p>
+        </div>
+        
+        {!whatsappConnected ? (
+          <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>Conecte seu WhatsApp primeiro para enviar mensagens de teste</span>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="test-phone" className="text-xs">
+                Número do WhatsApp (com DDD)
+              </Label>
+              <Input
+                id="test-phone"
+                placeholder="11999998888"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                disabled={isSending}
+                className="h-9"
+              />
+              <p className="text-xs text-muted-foreground">
+                Digite apenas números, sem espaços ou caracteres especiais
+              </p>
+            </div>
+            
+            <Button
+              onClick={handleSendTest}
+              disabled={isSending || !testPhone.trim()}
+              className="w-full gap-2"
+              size="sm"
+            >
+              {isSending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : sendStatus === 'success' ? (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Enviado com sucesso!
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Enviar Teste
+                </>
+              )}
+            </Button>
+            
+            {sendStatus === 'error' && (
+              <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2 text-xs text-destructive">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                <span>Falha ao enviar. Verifique o número e tente novamente.</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

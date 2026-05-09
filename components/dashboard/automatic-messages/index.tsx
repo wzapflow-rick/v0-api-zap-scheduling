@@ -19,6 +19,7 @@ interface AutomaticMessagesProps {
 export function AutomaticMessages({ slug, planLimit = 5 }: AutomaticMessagesProps) {
   const [activeMessages, setActiveMessages] = useState<string[]>([]);
   const [whatsappConnected, setWhatsappConnected] = useState(false);
+  const [instanceName, setInstanceName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -30,13 +31,15 @@ export function AutomaticMessages({ slug, planLimit = 5 }: AutomaticMessagesProp
       if (result.success && result.data) {
         setActiveMessages(result.data.activeMessages || []);
         setWhatsappConnected(result.data.whatsappConnected || false);
+        setInstanceName(result.data.whatsappInstanceName || `ZapFlow-Agenda_${slug}`);
       }
     } catch {
       // If endpoint doesn't exist yet, use empty defaults
+      setInstanceName(`ZapFlow-Agenda_${slug}`);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [slug]);
 
   useEffect(() => {
     loadConfig();
@@ -134,6 +137,8 @@ export function AutomaticMessages({ slug, planLimit = 5 }: AutomaticMessagesProp
             activeMessageIds={activeMessages}
             planLimit={planLimit}
             onActiveMessagesChange={handleActiveMessagesChange}
+            instanceName={instanceName}
+            whatsappConnected={whatsappConnected}
           />
         </CardContent>
       </Card>

@@ -52,6 +52,8 @@ interface MessageSelectorProps {
   activeMessageIds: string[];
   planLimit: number;
   onActiveMessagesChange: (ids: string[]) => void;
+  instanceName?: string | null;
+  whatsappConnected?: boolean;
 }
 
 const triggerIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -168,7 +170,7 @@ function DragOverlayCard({ message }: { message: AutomaticMessage }) {
   );
 }
 
-export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesChange }: MessageSelectorProps) {
+export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesChange, instanceName, whatsappConnected }: MessageSelectorProps) {
   const [previewMessage, setPreviewMessage] = useState<AutomaticMessage | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -242,7 +244,13 @@ export function MessageSelector({ activeMessageIds, planLimit, onActiveMessagesC
         <DialogHeader>
           <DialogTitle>{previewMessage?.name}</DialogTitle>
         </DialogHeader>
-        {previewMessage && <MessagePreview message={previewMessage} />}
+        {previewMessage && (
+          <MessagePreview 
+            message={previewMessage} 
+            instanceName={instanceName}
+            whatsappConnected={whatsappConnected}
+          />
+        )}
       </DialogContent>
     </Dialog>
     
