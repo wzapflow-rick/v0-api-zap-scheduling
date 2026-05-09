@@ -5,56 +5,58 @@ import { cn } from '@/lib/utils';
 
 const plans = [
   {
-    name: 'Start',
-    description: 'Para quem está começando',
-    price: 'Grátis',
-    priceDetail: 'para sempre',
+    name: 'Essencial',
+    description: 'Ideal para profissionais independentes que estão começando a organizar sua agenda.',
+    price: 'R$ 49',
+    priceDetail: ',90/mês',
     features: [
-      'Até 50 agendamentos/mês',
-      '1 profissional',
-      'Página de agendamento online',
-      'Notificações por e-mail',
-      'Suporte por e-mail',
+      '1 Profissional',
+      '100 Agendamentos/mês',
+      '3 Automações de WhatsApp',
+      'Página de agendamento exclusiva',
+      'Link personalizado para Bio do Instagram',
+      'Pagamentos apenas no local',
     ],
-    cta: 'Começar Grátis',
-    href: '/register?plan=start',
+    cta: 'Começar Agora',
+    href: '/register?plan=essencial',
     highlighted: false,
+    badge: null,
   },
   {
-    name: 'Pro',
-    description: 'Para negócios em crescimento',
-    price: 'R$ 79',
-    priceDetail: '/mês',
+    name: 'Professional',
+    description: 'O favorito de barbearias e salões que possuem equipe e querem reduzir as faltas.',
+    price: 'R$ 119',
+    priceDetail: ',90/mês',
     features: [
+      'Até 5 Profissionais',
       'Agendamentos ilimitados',
-      'Até 5 profissionais',
-      'Página de agendamento personalizada',
-      'Notificações via WhatsApp',
-      'Relatórios avançados',
-      'Suporte prioritário',
-      'Sem marca ZapAgenda',
+      'Todas as automações de WhatsApp',
+      'Checkout online (sinal ou integral)',
+      'Painel financeiro por profissional',
+      'Suporte prioritário via WhatsApp',
     ],
     cta: 'Começar Teste Grátis',
-    href: '/register?plan=pro',
+    href: '/register?plan=professional',
     highlighted: true,
+    badge: 'Mais Popular',
   },
   {
     name: 'Elite',
-    description: 'Para grandes estabelecimentos',
-    price: 'R$ 149',
-    priceDetail: '/mês',
+    description: 'Ideal para estabelecimentos de grande porte ou redes com múltiplos profissionais.',
+    price: 'R$ 249',
+    priceDetail: ',90/mês',
     features: [
-      'Tudo do plano Pro',
       'Profissionais ilimitados',
-      'Múltiplas unidades',
-      'API de integração',
-      'Gerente de sucesso dedicado',
-      'Treinamento personalizado',
-      'SLA garantido',
+      'Agendamentos recorrentes',
+      'Split de pagamento automático',
+      'Lista de espera inteligente',
+      'Dashboard avançado (BI)',
+      'Relatórios de retenção e produtividade',
     ],
     cta: 'Falar com Vendas',
     href: '/register?plan=elite',
     highlighted: false,
+    badge: null,
   },
 ];
 
@@ -84,9 +86,9 @@ export function PricingSection() {
                   : 'border-border bg-card'
               )}
             >
-              {plan.highlighted && (
+              {plan.badge && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-sm font-medium text-primary-foreground">
-                  Mais Popular
+                  {plan.badge}
                 </div>
               )}
 
@@ -122,7 +124,7 @@ export function PricingSection() {
 
         {/* Additional info */}
         <p className="mt-12 text-center text-sm text-muted-foreground">
-          Todos os planos incluem 14 dias de teste grátis. Cancele quando quiser.
+          Todos os planos incluem 7 dias de teste grátis. Cancele quando quiser, sem burocracia.
         </p>
       </div>
     </section>
