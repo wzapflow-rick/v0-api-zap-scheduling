@@ -1,6 +1,6 @@
 // Enums
 export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
-export type SubscriptionStatus = 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'TRIALING';
+export type SubscriptionStatus = 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'TRIALING' | 'INACTIVE';
 
 // Interfaces principais
 export interface User {
@@ -101,16 +101,86 @@ export interface Appointment {
 export interface Subscription {
   id: string;
   status: SubscriptionStatus;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
+  startDate: string;
+  endDate: string;
+  gatewaySubscriptionId?: string;
+  isTrialing?: boolean;
+  trialEndsAt?: string | null;
   plan: Plan;
 }
 
 export interface Plan {
   id: string;
   name: string;
+  description?: string;
   price: number;
-  features: string[];
+  interval: 'MONTHLY' | 'YEARLY';
+  maxProfessionals: number;
+  maxServices: number;
+  maxAppointments: number;
+  trialDays: number;
+  active: boolean;
+  features: PlanFeatures;
+}
+
+export interface PlanFeatures {
+  whatsappAutomations: number;
+  bookingPage: boolean;
+  instagramBioLink: boolean;
+  onlinePayment: boolean;
+  financialDashboard: boolean;
+  prioritySupport: boolean;
+  recurringAppointments: boolean;
+  paymentSplit: boolean;
+  waitlist: boolean;
+  advancedBI: boolean;
+  retentionReports: boolean;
+}
+
+export interface SubscriptionPermissions {
+  hasActiveSubscription: boolean;
+  plan: {
+    id: string;
+    name: string;
+    price: number;
+  } | null;
+  subscription: {
+    id: string;
+    status: SubscriptionStatus;
+    startDate: string;
+    endDate: string;
+    isTrialing: boolean;
+    trialEndsAt: string | null;
+  } | null;
+  limits: {
+    maxProfessionals: number;
+    maxServices: number;
+    maxAppointments: number;
+  };
+  features: PlanFeatures;
+}
+
+export interface SubscriptionUsage {
+  usage: {
+    professionals: number;
+    services: number;
+    appointmentsThisMonth: number;
+  };
+  limits: {
+    professionals: number;
+    services: number;
+    appointments: number;
+  };
+  canAdd: {
+    professional: boolean;
+    service: boolean;
+    appointment: boolean;
+  };
+  percentUsed: {
+    professionals: number;
+    services: number;
+    appointments: number;
+  };
 }
 
 // Response padrão

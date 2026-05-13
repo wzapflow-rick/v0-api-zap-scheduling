@@ -13,6 +13,8 @@ import type {
   Plan,
   Subscription,
   SlotsResponse,
+  SubscriptionPermissions,
+  SubscriptionUsage,
 } from '@/types';
 
 // Use proxy to avoid CORS issues
@@ -286,8 +288,34 @@ export const appointmentsApi = {
 
 // Subscriptions API
 export const subscriptionsApi = {
-  get: () => apiFetch<Subscription>('/subscriptions'),
+  // GET /api/subscriptions - Get current subscription
+  get: () => apiFetch<{ subscription: Subscription | null; plan: Plan | null; isActive: boolean }>('/subscriptions'),
+  
+  // GET /api/plans - List available plans (public)
   getPlans: () => apiFetch<Plan[]>('/plans'),
+  
+  // POST /api/subscriptions - Create subscription / initiate payment
+  create: (planId: string) =>
+    apiFetch<{
+      preferenceId: string;
+      initPoint: string;
+      sandboxInitPoint: string;
+    }>('/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify({ planId }),
+    }),
+  
+  // GET /api/subscriptions/permissions - Get permissions and features
+  getPermissions: () => apiFetch<SubscriptionPermissions>('/subscriptions/permissions'),
+  
+  // GET /api/subscriptions/usage - Get usage vs limits
+  getUsage: () => apiFetch<SubscriptionUsage>('/subscriptions/usage'),
+  
+  // DELETE /api/subscriptions - Cancel subscription
+  cancel: () =>
+    apiFetch<{ message: string }>('/subscriptions', {
+      method: 'DELETE',
+    }),
 };
 
 // Automatic Messages API - Uses backend routes at /api/automatic-messages

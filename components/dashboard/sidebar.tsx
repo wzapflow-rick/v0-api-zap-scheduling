@@ -11,6 +11,7 @@ import {
   Scissors,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,11 @@ const sidebarLinks = [
     href: '/dashboard/servicos',
     label: 'Serviços',
     icon: Scissors,
+  },
+  {
+    href: '/dashboard/assinatura',
+    label: 'Assinatura',
+    icon: CreditCard,
   },
   {
     href: '/dashboard/configuracoes',

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
+import { useSearchParams } from 'next/navigation';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +28,7 @@ import type { Appointment, AppointmentStatus, Client } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { toast } from 'sonner';
 
 const statusColors: Record<AppointmentStatus, string> = {
   PENDING: 'bg-warning/10 text-warning border-warning/20',
@@ -74,6 +76,25 @@ const clientsFetcher = async () => {
 
 export default function DashboardPage() {
   const [chartPeriod, setChartPeriod] = useState<'weekly' | 'monthly'>('weekly');
+  const searchParams = useSearchParams();
+  const paymentStatus = searchParams.get('payment');
+  
+  // Handle payment callback
+  useEffect(() => {
+    if (paymentStatus === 'success') {
+      toast.success('Pagamento realizado com sucesso!', {
+        description: 'Sua assinatura está ativa.',
+      });
+    } else if (paymentStatus === 'failure') {
+      toast.error('Falha no pagamento', {
+        description: 'Tente novamente ou escolha outra forma de pagamento.',
+      });
+    } else if (paymentStatus === 'pending') {
+      toast.info('Pagamento pendente', {
+        description: 'Aguarde a confirmação do pagamento.',
+      });
+    }
+  }, [paymentStatus]);
   
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
