@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { AppointmentForm } from '@/components/dashboard/appointment-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/lib/auth-context';
+import { useAutoMessagesConfig } from '@/contexts/auto-messages-context';
 
 const statusColors: Record<AppointmentStatus, string> = {
   PENDING: 'bg-warning text-warning-foreground',
@@ -79,6 +80,7 @@ const professionalsFetcher = async () => {
 
 export default function AgendamentosPage() {
   const { user } = useAuth();
+  const { instanceName: configInstanceName } = useAutoMessagesConfig();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [professionalFilter, setProfessionalFilter] = useState<string>('all');
@@ -98,13 +100,10 @@ export default function AgendamentosPage() {
           const messageType = getMessageTypeForStatus(newStatus);
           const appointment = appointments.find((a: Appointment) => a.id === appointmentId);
           
-          if (messageType && appointment && appointment.client?.phone) {
-            const slug = user?.establishment?.slug;
-            const instanceName = `ZapFlow-Agenda_${slug}`;
-            
+          if (messageType && appointment && appointment.client?.phone && configInstanceName) {
             await sendMessageWithDebug({
               messageType,
-              instanceName,
+              instanceName: configInstanceName,
               appointmentData: {
                 clientName: appointment.client.name,
                 clientPhone: appointment.client.phone,
@@ -117,9 +116,8 @@ export default function AgendamentosPage() {
           }
         } else {
           // Debug: show which instance would be used
-          const slug = user?.establishment?.slug;
           toast.info(`[DEBUG] Backend deve enviar`, {
-            description: `Tipo: ${getMessageTypeForStatus(newStatus)}\nInstancia: ZapFlow-Agenda_${slug}`,
+            description: `Tipo: ${getMessageTypeForStatus(newStatus)}\nInstancia: ${configInstanceName || 'não configurada'}`,
             duration: 3000,
           });
         }

@@ -132,44 +132,13 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
         setBookingComplete(true);
         toast.success('Agendamento realizado com sucesso!');
         
-        // Send WhatsApp confirmation message
-        try {
-          const instanceName = `ZapFlow-Agenda_${slug}`;
-          
-          // Debug toast
-          toast.info(`[DEBUG] Enviando confirmação`, {
-            description: `Instancia: ${instanceName}\nTelefone: ${data.clientPhone}`,
-            duration: 5000,
-          });
-          
-          const msgResponse = await fetch('/api/messages/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messageType: 'confirmation',
-              instanceName,
-              appointmentData: {
-                clientName: data.clientName,
-                clientPhone: data.clientPhone,
-                date: format(selectedDate, 'dd/MM/yyyy'),
-                time: selectedTime,
-                serviceName: selectedService.name,
-                professionalName: selectedProfessional.name,
-              },
-            }),
-          });
-          
-          const msgResult = await msgResponse.json();
-          if (msgResult.success) {
-            toast.success(`[DEBUG] Mensagem enviada!`);
-          } else {
-            toast.error(`[DEBUG] Erro: ${msgResult.error}`);
-          }
-        } catch (msgError) {
-          // Silently fail - don't break the booking flow if message fails
-          console.error('[v0] Erro ao enviar mensagem WhatsApp:', msgError);
-          toast.error(`[DEBUG] Erro de conexão`);
-        }
+        // Note: WhatsApp confirmation message is sent by the backend
+        // when USE_BACKEND_MESSAGES = true
+        // Debug: show what would be sent
+        toast.info(`[DEBUG] Backend deve enviar confirmação`, {
+          description: `Slug: ${slug}\nTelefone: ${data.clientPhone}`,
+          duration: 5000,
+        });
       } else {
         toast.error(result.error || 'Erro ao realizar agendamento');
       }
