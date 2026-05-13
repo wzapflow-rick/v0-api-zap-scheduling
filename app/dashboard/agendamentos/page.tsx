@@ -114,12 +114,6 @@ export default function AgendamentosPage() {
               },
             });
           }
-        } else {
-          // Debug: show which instance would be used
-          toast.info(`[DEBUG] Backend deve enviar`, {
-            description: `Tipo: ${getMessageTypeForStatus(newStatus)}\nInstancia: ${configInstanceName || 'não configurada'}`,
-            duration: 3000,
-          });
         }
         
         mutate();

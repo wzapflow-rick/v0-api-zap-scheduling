@@ -131,14 +131,6 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
       if (result.success) {
         setBookingComplete(true);
         toast.success('Agendamento realizado com sucesso!');
-        
-        // Note: WhatsApp confirmation message is sent by the backend
-        // when USE_BACKEND_MESSAGES = true
-        // Debug: show what would be sent
-        toast.info(`[DEBUG] Backend deve enviar confirmação`, {
-          description: `Slug: ${slug}\nTelefone: ${data.clientPhone}`,
-          duration: 5000,
-        });
       } else {
         toast.error(result.error || 'Erro ao realizar agendamento');
       }

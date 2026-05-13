@@ -6,7 +6,7 @@
 export const USE_BACKEND_MESSAGES = true;
 
 // Debug mode - shows toast with instance name on every message attempt
-export const DEBUG_MESSAGES = true;
+export const DEBUG_MESSAGES = false;
 
 export interface MessageTemplate {
   id: string;
