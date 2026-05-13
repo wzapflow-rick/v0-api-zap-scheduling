@@ -199,7 +199,7 @@ export function getMessageTypeForStatus(status: string): string | null {
     'CONFIRMED': 'confirmation',
     'CANCELLED': 'cancellation',
     'NO_SHOW': 'no_show',
-    'COMPLETED': 'completed',
+    'COMPLETED': 'thank_you',
   };
   return statusMap[status] || null;
 }
