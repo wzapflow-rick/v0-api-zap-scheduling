@@ -196,7 +196,7 @@ export async function sendMessageWithDebug(params: {
 // Map appointment status to message type
 export function getMessageTypeForStatus(status: string): string | null {
   const statusMap: Record<string, string> = {
-    'CONFIRMED': 'confirmation',
+    'CONFIRMED': 'confirmed',  // Mensagem de confirmação pelo estabelecimento
     'CANCELLED': 'cancellation',
     'NO_SHOW': 'no_show',
     'COMPLETED': 'thank_you',
