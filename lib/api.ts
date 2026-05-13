@@ -295,29 +295,10 @@ export const automaticMessagesApi = {
   // GET /api/automatic-messages - Get config
   get: () =>
     apiFetch<{
-      activeMessages: string[];
       whatsappConnected: boolean;
       whatsappPhone: string | null;
       whatsappInstanceName: string | null;
-      availableMessages?: Array<{
-        id: string;
-        name: string;
-        description: string;
-        trigger: string;
-      }>;
     }>('/automatic-messages'),
-
-  // PUT /api/automatic-messages - Update active messages
-  update: (data: { activeMessages: string[] }) =>
-    apiFetch<{
-      activeMessages: string[];
-      whatsappConnected: boolean;
-      whatsappPhone: string | null;
-      whatsappInstanceName: string | null;
-    }>('/automatic-messages', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
 
   // GET /api/automatic-messages/whatsapp - Get WhatsApp status/QR code
   getWhatsAppStatus: () =>
@@ -343,6 +324,13 @@ export const automaticMessagesApi = {
   disconnectWhatsApp: () =>
     apiFetch<{ success: boolean }>('/automatic-messages/whatsapp', {
       method: 'DELETE',
+    }),
+
+  // POST /api/automatic-messages/test - Test message
+  testMessage: (data: { phone: string; message: string }) =>
+    apiFetch<{ success: boolean }>('/automatic-messages/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 
   // GET /api/automatic-messages/logs - Get message logs

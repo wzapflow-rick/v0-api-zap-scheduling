@@ -2,44 +2,40 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Save, MessageCircle, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Loader2, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { WhatsAppConnection } from './whatsapp-connection';
-import { MessageSelector } from './message-selector';
 import { automaticMessagesApi } from '@/lib/api';
 
 interface AutomaticMessagesProps {
   slug: string;
-  planLimit?: number;
 }
 
-export function AutomaticMessages({ slug, planLimit = 5 }: AutomaticMessagesProps) {
-  const [activeMessages, setActiveMessages] = useState<string[]>([]);
+const messageTypes = [
+  { id: 'confirmation', label: 'Confirmação de agendamento', description: 'Enviada ao criar um agendamento' },
+  { id: 'cancellation', label: 'Cancelamento', description: 'Enviada ao cancelar um agendamento' },
+  { id: 'thank_you', label: 'Agradecimento', description: 'Enviada ao concluir um agendamento' },
+  { id: 'no_show', label: 'Não comparecimento', description: 'Enviada quando o cliente falta' },
+  { id: 'reminder_24h', label: 'Lembrete 24h', description: 'Enviada 24h antes do agendamento' },
+  { id: 'reminder_1h', label: 'Lembrete 1h', description: 'Enviada 1h antes do agendamento' },
+];
+
+export function AutomaticMessages({ slug }: AutomaticMessagesProps) {
   const [whatsappConnected, setWhatsappConnected] = useState(false);
-  const [instanceName, setInstanceName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
 
   // Load config from API
   const loadConfig = useCallback(async () => {
     try {
       const result = await automaticMessagesApi.get();
       if (result.success && result.data) {
-        setActiveMessages(result.data.activeMessages || []);
         setWhatsappConnected(result.data.whatsappConnected || false);
-        setInstanceName(result.data.whatsappInstanceName || `ZapFlow-Agenda_${slug}`);
       }
     } catch {
-      // If endpoint doesn't exist yet, use empty defaults
-      setInstanceName(`ZapFlow-Agenda_${slug}`);
+      // If endpoint doesn't exist yet, use defaults
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, []);
 
   useEffect(() => {
     loadConfig();
@@ -47,32 +43,6 @@ export function AutomaticMessages({ slug, planLimit = 5 }: AutomaticMessagesProp
 
   const handleConnectionChange = (connected: boolean) => {
     setWhatsappConnected(connected);
-  };
-
-  const handleActiveMessagesChange = (newActiveMessages: string[]) => {
-    setActiveMessages(newActiveMessages);
-    setHasChanges(true);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    
-    try {
-      const result = await automaticMessagesApi.update({
-        activeMessages,
-      });
-      
-      if (result.success) {
-        setHasChanges(false);
-        toast.success('Configurações salvas!');
-      } else {
-        toast.error(result.error || 'Erro ao salvar configurações');
-      }
-    } catch {
-      toast.error('Erro ao conectar com o servidor');
-    } finally {
-      setSaving(false);
-    }
   };
 
   if (loading) {
@@ -86,17 +56,11 @@ export function AutomaticMessages({ slug, planLimit = 5 }: AutomaticMessagesProp
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Mensagens Automáticas</h2>
-          <p className="text-sm text-muted-foreground">
-            Configure mensagens automáticas via WhatsApp para seus clientes
-          </p>
-        </div>
-        <Button onClick={handleSave} disabled={!hasChanges || saving}>
-          <Save className="mr-2 h-4 w-4" />
-          {saving ? 'Salvando...' : 'Salvar Alterações'}
-        </Button>
+      <div>
+        <h2 className="text-xl font-semibold">Mensagens Automáticas</h2>
+        <p className="text-sm text-muted-foreground">
+          Conecte seu WhatsApp para enviar mensagens automáticas aos seus clientes
+        </p>
       </div>
 
       {/* WhatsApp Connection */}
@@ -105,64 +69,42 @@ export function AutomaticMessages({ slug, planLimit = 5 }: AutomaticMessagesProp
         onConnectionChange={handleConnectionChange}
       />
 
-      <Separator />
-
-      {/* Plan Info */}
+      {/* Info Card - What messages are sent */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <MessageCircle className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Selecione suas Mensagens</CardTitle>
-                <CardDescription>
-                  Escolha quais mensagens automáticas deseja ativar
-                </CardDescription>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <MessageCircle className="h-5 w-5 text-primary" />
             </div>
-            <div className="text-right">
-              <Badge variant="outline" className="text-xs">
-                Plano: Básico
-              </Badge>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {activeMessages.length}/{planLimit} mensagens
-              </p>
+            <div>
+              <CardTitle className="text-lg">Mensagens Enviadas Automaticamente</CardTitle>
+              <CardDescription>
+                Quando o WhatsApp estiver conectado, essas mensagens serão enviadas automaticamente
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <MessageSelector
-            activeMessageIds={activeMessages}
-            planLimit={planLimit}
-            onActiveMessagesChange={handleActiveMessagesChange}
-            instanceName={instanceName}
-            whatsappConnected={whatsappConnected}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Legend */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Legenda das Categorias</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 rounded bg-blue-500" />
-              <span className="text-sm">Agendamento</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 rounded bg-purple-500" />
-              <span className="text-sm">Relacionamento</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 rounded bg-orange-500" />
-              <span className="text-sm">Marketing</span>
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {messageTypes.map((msg) => (
+              <div
+                key={msg.id}
+                className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3"
+              >
+                <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${whatsappConnected ? 'text-green-500' : 'text-muted-foreground'}`} />
+                <div>
+                  <p className="text-sm font-medium">{msg.label}</p>
+                  <p className="text-xs text-muted-foreground">{msg.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
+          
+          {!whatsappConnected && (
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Conecte seu WhatsApp acima para ativar as mensagens automáticas
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

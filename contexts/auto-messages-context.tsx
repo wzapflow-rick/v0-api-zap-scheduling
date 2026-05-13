@@ -2,10 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { automaticMessagesApi } from '@/lib/api';
-import { USE_BACKEND_MESSAGES } from '@/lib/message-service';
 
 interface AutoMessagesConfig {
-  activeMessages: string[];
   whatsappConnected: boolean;
   whatsappPhone: string | null;
   whatsappInstanceName: string | null;
@@ -16,12 +14,11 @@ interface AutoMessagesContextValue {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  canSendMessage: (messageType: string) => boolean;
+  canSendMessage: () => boolean;
   instanceName: string | null;
 }
 
 const defaultConfig: AutoMessagesConfig = {
-  activeMessages: [],
   whatsappConnected: false,
   whatsappPhone: null,
   whatsappInstanceName: null,
@@ -41,7 +38,6 @@ export function AutoMessagesProvider({ children, slug }: { children: ReactNode; 
       const result = await automaticMessagesApi.get();
       if (result.success && result.data) {
         setConfig({
-          activeMessages: result.data.activeMessages || [],
           whatsappConnected: result.data.whatsappConnected || false,
           whatsappPhone: result.data.whatsappPhone || null,
           whatsappInstanceName: result.data.whatsappInstanceName || (slug ? `ZapFlow-Agenda_${slug}` : null),
@@ -53,7 +49,7 @@ export function AutoMessagesProvider({ children, slug }: { children: ReactNode; 
           whatsappInstanceName: slug ? `ZapFlow-Agenda_${slug}` : null,
         });
       }
-    } catch (err) {
+    } catch {
       setError('Erro ao carregar configurações de mensagens');
       // Use slug-based instance name as fallback
       setConfig({
@@ -69,12 +65,10 @@ export function AutoMessagesProvider({ children, slug }: { children: ReactNode; 
     fetchConfig();
   }, [fetchConfig]);
 
-  const canSendMessage = useCallback((messageType: string): boolean => {
-    if (USE_BACKEND_MESSAGES) return false; // Backend handles it
+  // Simplified: can send if WhatsApp is connected and instanceName exists
+  const canSendMessage = useCallback((): boolean => {
     if (!config) return false;
-    // Note: We don't check whatsappConnected because the backend may not be saving it correctly.
-    // Instead, we rely on instanceName being present (which indicates the user has configured WhatsApp)
-    if (!config.activeMessages.includes(messageType)) return false;
+    if (!config.whatsappConnected) return false;
     if (!config.whatsappInstanceName) return false;
     return true;
   }, [config]);
