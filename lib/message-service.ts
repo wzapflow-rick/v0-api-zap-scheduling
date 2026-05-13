@@ -5,6 +5,9 @@
 // Toggle this to switch between frontend and backend message sending
 export const USE_BACKEND_MESSAGES = true;
 
+// Debug mode - shows toast with instance name on every message attempt
+export const DEBUG_MESSAGES = true;
+
 export interface MessageTemplate {
   id: string;
   name: string;
@@ -130,4 +133,73 @@ export function formatPhoneForWhatsApp(phone: string): string {
   
   // Evolution API requires the format: 5511999999999@s.whatsapp.net
   return `${numbers}@s.whatsapp.net`;
+}
+
+// Send message with debug toast
+export async function sendMessageWithDebug(params: {
+  messageType: string;
+  instanceName: string;
+  appointmentData: AppointmentData;
+  showDebugToast?: boolean;
+}): Promise<{ success: boolean; error?: string }> {
+  const { messageType, instanceName, appointmentData, showDebugToast = DEBUG_MESSAGES } = params;
+  
+  // Import toast dynamically to avoid circular dependencies
+  const { toast } = await import('sonner');
+  
+  if (showDebugToast) {
+    toast.info(`[DEBUG] Enviando mensagem`, {
+      description: `Tipo: ${messageType}\nInstancia: ${instanceName}\nTelefone: ${appointmentData.clientPhone}`,
+      duration: 5000,
+    });
+  }
+  
+  try {
+    const response = await fetch('/api/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messageType,
+        instanceName,
+        appointmentData,
+      }),
+    });
+    
+    const result = await response.json();
+    
+    if (showDebugToast) {
+      if (result.success) {
+        toast.success(`[DEBUG] Mensagem enviada!`, {
+          description: `Instancia: ${instanceName}`,
+        });
+      } else {
+        toast.error(`[DEBUG] Erro ao enviar`, {
+          description: result.error || 'Erro desconhecido',
+        });
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro de conexão';
+    
+    if (showDebugToast) {
+      toast.error(`[DEBUG] Erro de conexão`, {
+        description: errorMessage,
+      });
+    }
+    
+    return { success: false, error: errorMessage };
+  }
+}
+
+// Map appointment status to message type
+export function getMessageTypeForStatus(status: string): string | null {
+  const statusMap: Record<string, string> = {
+    'CONFIRMED': 'confirmation',
+    'CANCELLED': 'cancellation',
+    'NO_SHOW': 'no_show',
+    'COMPLETED': 'completed',
+  };
+  return statusMap[status] || null;
 }

@@ -13,10 +13,12 @@ import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User,
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { appointmentsApi, professionalsApi } from '@/lib/api';
+import { sendMessageWithDebug, getMessageTypeForStatus, USE_BACKEND_MESSAGES } from '@/lib/message-service';
 import type { Appointment, AppointmentStatus, Professional } from '@/types';
 import { cn } from '@/lib/utils';
 import { AppointmentForm } from '@/components/dashboard/appointment-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/lib/auth-context';
 
 const statusColors: Record<AppointmentStatus, string> = {
   PENDING: 'bg-warning text-warning-foreground',
@@ -76,6 +78,7 @@ const professionalsFetcher = async () => {
 };
 
 export default function AgendamentosPage() {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [professionalFilter, setProfessionalFilter] = useState<string>('all');
@@ -89,6 +92,38 @@ export default function AgendamentosPage() {
       const result = await appointmentsApi.updateStatus(appointmentId, newStatus);
       if (result.success) {
         toast.success(`Status atualizado para ${statusLabels[newStatus]}`);
+        
+        // Send WhatsApp message if not using backend messages
+        if (!USE_BACKEND_MESSAGES) {
+          const messageType = getMessageTypeForStatus(newStatus);
+          const appointment = appointments.find((a: Appointment) => a.id === appointmentId);
+          
+          if (messageType && appointment && appointment.client?.phone) {
+            const slug = user?.establishment?.slug;
+            const instanceName = `ZapFlow-Agenda_${slug}`;
+            
+            await sendMessageWithDebug({
+              messageType,
+              instanceName,
+              appointmentData: {
+                clientName: appointment.client.name,
+                clientPhone: appointment.client.phone,
+                date: format(new Date(appointment.date), 'dd/MM/yyyy'),
+                time: appointment.startTime,
+                serviceName: appointment.service?.name || 'Serviço',
+                professionalName: appointment.professional?.name || 'Profissional',
+              },
+            });
+          }
+        } else {
+          // Debug: show which instance would be used
+          const slug = user?.establishment?.slug;
+          toast.info(`[DEBUG] Backend deve enviar`, {
+            description: `Tipo: ${getMessageTypeForStatus(newStatus)}\nInstancia: ZapFlow-Agenda_${slug}`,
+            duration: 3000,
+          });
+        }
+        
         mutate();
       } else {
         toast.error(result.error || 'Erro ao atualizar status');

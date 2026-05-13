@@ -135,7 +135,14 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
         // Send WhatsApp confirmation message
         try {
           const instanceName = `ZapFlow-Agenda_${slug}`;
-          await fetch('/api/messages/send', {
+          
+          // Debug toast
+          toast.info(`[DEBUG] Enviando confirmação`, {
+            description: `Instancia: ${instanceName}\nTelefone: ${data.clientPhone}`,
+            duration: 5000,
+          });
+          
+          const msgResponse = await fetch('/api/messages/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -151,9 +158,17 @@ export default function AgendarPage({ params }: { params: Promise<PageParams> })
               },
             }),
           });
+          
+          const msgResult = await msgResponse.json();
+          if (msgResult.success) {
+            toast.success(`[DEBUG] Mensagem enviada!`);
+          } else {
+            toast.error(`[DEBUG] Erro: ${msgResult.error}`);
+          }
         } catch (msgError) {
           // Silently fail - don't break the booking flow if message fails
           console.error('[v0] Erro ao enviar mensagem WhatsApp:', msgError);
+          toast.error(`[DEBUG] Erro de conexão`);
         }
       } else {
         toast.error(result.error || 'Erro ao realizar agendamento');
