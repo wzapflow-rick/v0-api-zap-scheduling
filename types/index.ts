@@ -188,6 +188,7 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  retryAfter?: number; // Rate limiting - seconds to wait before retrying
   pagination?: {
     page: number;
     limit: number;

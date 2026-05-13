@@ -9,8 +9,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (data: LoginRequest) => Promise<{ success: boolean; error?: string }>;
-  register: (data: RegisterRequest) => Promise<{ success: boolean; error?: string }>;
+  login: (data: LoginRequest) => Promise<{ success: boolean; error?: string; retryAfter?: number }>;
+  register: (data: RegisterRequest) => Promise<{ success: boolean; error?: string; retryAfter?: number }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -66,7 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(response.data.user);
         return { success: true };
       }
-      return { success: false, error: response.error || 'Erro ao fazer login' };
+      return { 
+        success: false, 
+        error: response.error || 'Erro ao fazer login',
+        retryAfter: response.retryAfter,
+      };
     } catch (error) {
       console.error('[v0] Login error:', error);
       return { success: false, error: 'Erro ao fazer login' };
@@ -83,7 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(response.data.user);
         return { success: true };
       }
-      return { success: false, error: response.error || 'Erro ao criar conta' };
+      return { 
+        success: false, 
+        error: response.error || 'Erro ao criar conta',
+        retryAfter: response.retryAfter,
+      };
     } catch (error) {
       console.error('[v0] Register error:', error);
       return { success: false, error: 'Erro ao criar conta' };
