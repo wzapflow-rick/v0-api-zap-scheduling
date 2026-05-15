@@ -1,90 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-// URL da API - garante que sempre termina com /api
-const getApiBaseUrl = () => {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (envUrl) {
-    // Se a env var existir, garante que termina com /api
-    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
-  }
-  // URL padrão
-  return 'https://api.agenda.wzapflow.com.br/api';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+// URL da API fixa
+const API_BASE_URL = 'https://api.agenda.wzapflow.com.br/api';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleProxy(request, await params);
+  const resolvedParams = await params;
+  return handleProxy(request, resolvedParams);
 }
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleProxy(request, await params);
+  const resolvedParams = await params;
+  return handleProxy(request, resolvedParams);
 }
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleProxy(request, await params);
+  const resolvedParams = await params;
+  return handleProxy(request, resolvedParams);
 }
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleProxy(request, await params);
+  const resolvedParams = await params;
+  return handleProxy(request, resolvedParams);
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleProxy(request, await params);
+  const resolvedParams = await params;
+  return handleProxy(request, resolvedParams);
 }
 
 async function handleProxy(
   request: NextRequest,
   params: { path: string[] }
 ) {
-  const path = params.path.join('/');
-  const url = new URL(request.url);
-  const searchParams = url.searchParams.toString();
-  const targetUrl = `${API_BASE_URL}/${path}${searchParams ? `?${searchParams}` : ''}`;
-
-  // Try to get token from Authorization header first (client-side request)
-  // then fall back to cookie (server-side)
-  let token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    const cookieStore = await cookies();
-    token = cookieStore.get('auth_token')?.value;
-  }
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  let body: string | undefined;
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    try {
-      body = await request.text();
-    } catch {
-      // No body
-    }
-  }
-
   try {
+    const path = params.path.join('/');
+    const url = new URL(request.url);
+    const searchParams = url.searchParams.toString();
+    const targetUrl = `${API_BASE_URL}/${path}${searchParams ? `?${searchParams}` : ''}`;
+
+    // Try to get token from Authorization header first, then fall back to cookie
+    let token = request.headers.get('Authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      const cookieStore = await cookies();
+      token = cookieStore.get('auth_token')?.value;
+    }
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    let body: string | undefined;
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      try {
+        body = await request.text();
+      } catch {
+        // No body
+      }
+    }
+
     const response = await fetch(targetUrl, {
       method: request.method,
       headers,
@@ -92,11 +86,12 @@ async function handleProxy(
     });
 
     const data = await response.json();
-    
+
     return NextResponse.json(data, {
       status: response.status,
     });
-  } catch {
+  } catch (error) {
+    console.error('[v0] Proxy handler error:', error);
     return NextResponse.json(
       { success: false, error: 'Erro ao conectar com o servidor' },
       { status: 500 }
