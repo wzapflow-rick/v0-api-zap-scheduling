@@ -17,10 +17,8 @@ import type {
   SubscriptionUsage,
 } from '@/types';
 
-// Use proxy to avoid CORS issues - configured via environment variable
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL 
-  ? `${process.env.NEXT_PUBLIC_API_URL}` 
-  : '/api/proxy';
+// Use proxy to avoid CORS issues
+const API_BASE_URL = '/api/proxy';
 
 // Token management
 export const getToken = () => Cookies.get('auth_token');
