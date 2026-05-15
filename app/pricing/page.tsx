@@ -131,8 +131,10 @@ export default function PricingPage() {
     }
   };
 
-  const formatPrice = (price: number) => {
-    const [reais, centavos] = price.toFixed(2).split('.');
+  const formatPrice = (price: number | string) => {
+    // Converte para número caso venha como string da API
+    const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
+    const [reais, centavos] = numericPrice.toFixed(2).split('.');
     return { reais, centavos };
   };
 
@@ -195,7 +197,11 @@ export default function PricingPage() {
     );
   }
 
-  const sortedPlans = [...(plans || [])].sort((a, b) => a.price - b.price);
+  const sortedPlans = [...(plans || [])].sort((a, b) => {
+    const priceA = typeof a.price === 'string' ? parseFloat(a.price) : a.price;
+    const priceB = typeof b.price === 'string' ? parseFloat(b.price) : b.price;
+    return priceA - priceB;
+  });
   const professionalPlan = sortedPlans.find(p => p.name === 'Professional');
 
   return (
