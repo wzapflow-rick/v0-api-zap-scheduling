@@ -22,7 +22,6 @@ async function evolutionFetch<T>(
   const { apiUrl, apiKey } = getEvolutionConfig();
   
   if (!apiUrl || !apiKey) {
-    console.log('[v0] Evolution API config missing:', { apiUrl: !!apiUrl, apiKey: !!apiKey });
     return {
       success: false,
       error: 'Evolution API não configurada. Verifique as variáveis de ambiente EVOLUTION_API_URL e EVOLUTION_API_KEY.',

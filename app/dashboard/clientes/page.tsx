@@ -36,7 +36,6 @@ const clientsFetcher = async (key: [string, string]) => {
   const [, search] = key;
   const res = await clientsApi.list({ search, limit: 100 });
   if (!res.success) {
-    console.log('[v0] Clients API error:', res.error);
     return [];
   }
   // API returns { data: { clients: [...], pagination: {...} } }

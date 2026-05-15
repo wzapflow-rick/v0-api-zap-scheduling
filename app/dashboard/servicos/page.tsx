@@ -37,7 +37,6 @@ const servicesFetcher = async (key: [string, string]) => {
   const [, search] = key;
   const res = await servicesApi.list({ search, limit: 100 });
   if (!res.success) {
-    console.log('[v0] Services API error:', res.error);
     return [];
   }
   // API returns { data: { services: [...], pagination: {...} } }

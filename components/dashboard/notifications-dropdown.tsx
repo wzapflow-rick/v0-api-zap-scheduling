@@ -52,8 +52,8 @@ export function NotificationsDropdown() {
         setNotifications(result.data.notifications);
         setUnreadCount(result.data.unreadCount);
       }
-    } catch (error) {
-      console.error('[v0] Erro ao buscar notificações:', error);
+    } catch {
+      // Silently fail
     } finally {
       setLoading(false);
     }

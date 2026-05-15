@@ -55,7 +55,6 @@ type EstablishmentFormData = z.infer<typeof establishmentSchema>;
 const establishmentFetcher = async () => {
   const res = await establishmentApi.get();
   if (!res.success) {
-    console.log('[v0] Establishment API error:', res.error);
     return null;
   }
   return res.data;

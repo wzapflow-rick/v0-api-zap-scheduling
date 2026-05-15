@@ -67,13 +67,6 @@ export async function POST(request: Request) {
     // Format phone number
     const formattedPhone = formatPhoneForWhatsApp(appointmentData.clientPhone);
 
-    console.log('[v0] Enviando mensagem WhatsApp:', {
-      instanceName,
-      to: formattedPhone,
-      messageType,
-      messageLength: messageContent.length,
-    });
-
     // Send via Evolution API
     const result = await evolutionApi.sendTextMessage(
       instanceName,
@@ -81,14 +74,7 @@ export async function POST(request: Request) {
       messageContent
     );
 
-    console.log('[v0] Resultado envio Evolution:', {
-      success: result.success,
-      error: result.error,
-      data: result.data ? 'presente' : 'ausente',
-    });
-
     if (!result.success) {
-      console.error('[v0] Erro ao enviar mensagem:', result.error);
       return NextResponse.json(
         { success: false, error: result.error || 'Erro ao enviar mensagem' },
         { status: 500 }
@@ -104,8 +90,7 @@ export async function POST(request: Request) {
       },
     });
 
-  } catch (error) {
-    console.error('[v0] Erro na rota send-message:', error);
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Erro interno ao enviar mensagem' },
       { status: 500 }

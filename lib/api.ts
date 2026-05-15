@@ -17,8 +17,10 @@ import type {
   SubscriptionUsage,
 } from '@/types';
 
-// Use proxy to avoid CORS issues
-const API_BASE_URL = '/api/proxy';
+// Use proxy to avoid CORS issues - configured via environment variable
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL 
+  ? `${process.env.NEXT_PUBLIC_API_URL}` 
+  : '/api/proxy';
 
 // Token management
 export const getToken = () => Cookies.get('auth_token');
@@ -31,11 +33,6 @@ async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   const token = getToken();
-  
-  // Debug: log token status for authenticated endpoints
-  if (!endpoint.startsWith('/auth/') && !endpoint.startsWith('/public/')) {
-    console.log('[v0] apiFetch token exists:', !!token, 'endpoint:', endpoint);
-  }
   
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -69,6 +66,7 @@ async function apiFetch<T>(
       return {
         success: false,
         error: data.error || 'Erro na requisição',
+        retryAfter: data.retryAfter,
       };
     }
 
@@ -78,10 +76,10 @@ async function apiFetch<T>(
     }
     
     return { success: true, data };
-  } catch (error) {
+  } catch {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Erro de conexão',
+      error: 'Erro de conexão',
     };
   }
 }

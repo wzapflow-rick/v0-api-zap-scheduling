@@ -24,7 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     const token = getToken();
-    console.log('[v0] refreshUser called, token exists:', !!token);
     
     if (!token) {
       setUser(null);
@@ -34,17 +33,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const response = await authApi.me();
-      console.log('[v0] authApi.me response:', response);
       
       if (response.success && response.data) {
         setUser(response.data);
       } else {
-        console.log('[v0] Auth failed, clearing token');
         removeToken();
         setUser(null);
       }
-    } catch (error) {
-      console.error('[v0] Auth error:', error);
+    } catch {
       removeToken();
       setUser(null);
     } finally {
@@ -59,7 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (data: LoginRequest) => {
     try {
       const response = await authApi.login(data);
-      console.log('[v0] Login response:', response);
       
       if (response.success && response.data) {
         setToken(response.data.token);
@@ -71,8 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: response.error || 'Erro ao fazer login',
         retryAfter: response.retryAfter,
       };
-    } catch (error) {
-      console.error('[v0] Login error:', error);
+    } catch {
       return { success: false, error: 'Erro ao fazer login' };
     }
   };
@@ -80,7 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (data: RegisterRequest) => {
     try {
       const response = await authApi.register(data);
-      console.log('[v0] Register response:', response);
       
       if (response.success && response.data) {
         setToken(response.data.token);
@@ -92,8 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: response.error || 'Erro ao criar conta',
         retryAfter: response.retryAfter,
       };
-    } catch (error) {
-      console.error('[v0] Register error:', error);
+    } catch {
       return { success: false, error: 'Erro ao criar conta' };
     }
   };
