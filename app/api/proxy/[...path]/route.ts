@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.agenda.wzapflow.com.br/api';
+// URL da API - garante que sempre termina com /api
+const getApiBaseUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) {
+    // Se a env var existir, garante que termina com /api
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+  }
+  // URL padrão
+  return 'https://api.agenda.wzapflow.com.br/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export async function GET(
   request: NextRequest,
