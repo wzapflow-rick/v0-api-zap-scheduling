@@ -56,18 +56,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authApi.login(data);
       
-      if (response.success && response.data) {
+      // Verifica se o login foi bem sucedido (tem token e user)
+      if (response.success && response.data && response.data.token && response.data.user) {
         setToken(response.data.token);
         setUser(response.data.user);
         return { success: true };
       }
+      
+      // Trata caso onde backend retorna success:true mas com erro dentro de data
+      const errorMessage = (response.data as any)?.error || response.error || 'Erro ao fazer login';
+      
       return { 
         success: false, 
-        error: response.error || 'Erro ao fazer login',
+        error: errorMessage,
         retryAfter: response.retryAfter,
       };
     } catch {
-      return { success: false, error: 'Erro ao fazer login' };
+      return { success: false, error: 'Erro ao conectar com o servidor' };
     }
   };
 
@@ -75,18 +80,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authApi.register(data);
       
-      if (response.success && response.data) {
+      // Verifica se o registro foi bem sucedido (tem token e user)
+      if (response.success && response.data && response.data.token && response.data.user) {
         setToken(response.data.token);
         setUser(response.data.user);
         return { success: true };
       }
+      
+      // Trata caso onde backend retorna success:true mas com erro dentro de data
+      // Ex: {"success":true,"data":{"error":"Email ja esta em uso"}}
+      const errorMessage = (response.data as any)?.error || response.error || 'Erro ao criar conta';
+      
       return { 
         success: false, 
-        error: response.error || 'Erro ao criar conta',
+        error: errorMessage,
         retryAfter: response.retryAfter,
       };
     } catch {
-      return { success: false, error: 'Erro ao criar conta' };
+      return { success: false, error: 'Erro ao conectar com o servidor' };
     }
   };
 
