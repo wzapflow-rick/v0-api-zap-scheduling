@@ -79,7 +79,7 @@ export default function LoginPage() {
         }
       }
     } catch {
-      toast.error('Erro ao fazer login. Tente novamente.');
+      toast.error('Erro ao conectar com o servidor. Verifique sua conexão.');
     } finally {
       setIsLoading(false);
     }

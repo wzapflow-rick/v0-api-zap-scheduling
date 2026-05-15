@@ -109,7 +109,7 @@ export default function RegisterPage() {
         }
       }
     } catch {
-      toast.error('Erro ao criar conta. Tente novamente.');
+      toast.error('Erro ao conectar com o servidor. Verifique sua conexão.');
     } finally {
       setIsLoading(false);
     }

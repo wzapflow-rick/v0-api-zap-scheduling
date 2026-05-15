@@ -13,10 +13,89 @@ import { toast } from 'sonner';
 import type { Plan } from '@/types';
 import { useAuth } from '@/lib/auth-context';
 
+// Planos estáticos como fallback quando a API não está disponível
+const FALLBACK_PLANS: Plan[] = [
+  {
+    id: 'essencial',
+    name: 'Essencial',
+    description: 'Ideal para profissionais independentes que estão começando a organizar sua agenda.',
+    price: 49.90,
+    maxProfessionals: 1,
+    maxAppointments: 100,
+    trialDays: 7,
+    features: {
+      whatsappAutomations: 3,
+      bookingPage: true,
+      instagramBioLink: true,
+      onlinePayment: false,
+      financialDashboard: false,
+      prioritySupport: false,
+      recurringAppointments: false,
+      paymentSplit: false,
+      waitlist: false,
+      advancedBI: false,
+      retentionReports: false,
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'professional',
+    name: 'Professional',
+    description: 'O favorito de barbearias e salões que possuem equipe e querem reduzir as faltas.',
+    price: 119.90,
+    maxProfessionals: 5,
+    maxAppointments: 999999,
+    trialDays: 7,
+    features: {
+      whatsappAutomations: 999,
+      bookingPage: true,
+      instagramBioLink: true,
+      onlinePayment: true,
+      financialDashboard: true,
+      prioritySupport: true,
+      recurringAppointments: false,
+      paymentSplit: false,
+      waitlist: false,
+      advancedBI: false,
+      retentionReports: false,
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'elite',
+    name: 'Elite',
+    description: 'Ideal para estabelecimentos de grande porte ou redes com múltiplos profissionais.',
+    price: 249.90,
+    maxProfessionals: 999,
+    maxAppointments: 999999,
+    trialDays: 7,
+    features: {
+      whatsappAutomations: 999,
+      bookingPage: true,
+      instagramBioLink: true,
+      onlinePayment: true,
+      financialDashboard: true,
+      prioritySupport: true,
+      recurringAppointments: true,
+      paymentSplit: true,
+      waitlist: true,
+      advancedBI: true,
+      retentionReports: true,
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
 const plansFetcher = async () => {
   const res = await subscriptionsApi.getPlans();
-  if (!res.success) return [];
-  return res.data || [];
+  if (!res.success || !res.data || res.data.length === 0) {
+    // Retorna planos estáticos como fallback
+    return FALLBACK_PLANS;
+  }
+  return res.data;
 };
 
 export default function PricingPage() {
@@ -26,6 +105,7 @@ export default function PricingPage() {
   
   const { data: plans, isLoading } = useSWR<Plan[]>('plans', plansFetcher, {
     revalidateOnFocus: false,
+    fallbackData: FALLBACK_PLANS,
   });
 
   const handleSubscribe = async (plan: Plan) => {
@@ -98,11 +178,11 @@ export default function PricingPage() {
   };
 
   const getCta = (plan: Plan) => {
-    if (plan.trialDays > 0) {
-      return `Começar Teste Grátis de ${plan.trialDays} dias`;
-    }
     if (plan.name === 'Elite') {
       return 'Falar com Vendas';
+    }
+    if (plan.name === 'Professional' && plan.trialDays > 0) {
+      return 'Começar Teste Grátis';
     }
     return 'Começar Agora';
   };
