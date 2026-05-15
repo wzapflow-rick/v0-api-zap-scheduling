@@ -61,9 +61,12 @@ async function apiFetch<T>(
     }
     
     if (!response.ok) {
+      // Trata caso onde backend retorna success:true mas com erro dentro de data
+      // Ex: {"success":true,"data":{"error":"Email ja esta em uso"}}
+      const errorMessage = data.data?.error || data.error || 'Erro na requisição';
       return {
         success: false,
-        error: data.error || 'Erro na requisição',
+        error: errorMessage,
         retryAfter: data.retryAfter,
       };
     }
