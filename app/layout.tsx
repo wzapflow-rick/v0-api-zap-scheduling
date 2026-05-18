@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/components/theme-provider';
+import { OfflineProvider } from '@/components/offline-provider';
 import './globals.css';
 
 const geist = Geist({ 
@@ -67,7 +68,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {children}
+            <OfflineProvider>
+              {children}
+            </OfflineProvider>
             <Toaster richColors position="top-right" />
           </AuthProvider>
         </ThemeProvider>

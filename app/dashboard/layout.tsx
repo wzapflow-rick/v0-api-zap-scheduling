@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { DashboardHeader } from '@/components/dashboard/header';
+import { OfflineBanner } from '@/components/connection-status';
 import { Loader2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -54,6 +55,7 @@ export default function DashboardLayout({
         </Sheet>
         
         <div className="lg:pl-64 transition-all duration-300">
+          <OfflineBanner />
           <DashboardHeader onMenuClick={() => setMobileOpen(true)} />
           <main className="p-4 lg:p-6">{children}</main>
         </div>

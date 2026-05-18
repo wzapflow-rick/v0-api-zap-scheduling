@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Bell, LogOut, Settings, User, ExternalLink, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ConnectionStatus } from '@/components/connection-status';
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -63,6 +64,9 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Connection Status */}
+        <ConnectionStatus compact />
+        
         {/* Theme Toggle */}
         <ThemeToggle />
         

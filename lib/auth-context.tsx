@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi, setToken, removeToken, getToken } from '@/lib/api';
+import { clearAllOfflineData } from '@/lib/offline';
 import type { User, LoginRequest, RegisterRequest } from '@/types';
 
 interface AuthContextType {
@@ -101,11 +102,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(async () => {
     removeToken();
     setUser(null);
+    // Clear offline data on logout
+    try {
+      await clearAllOfflineData();
+    } catch {
+      // Ignore errors during cleanup
+    }
     router.push('/');
-  };
+  }, [router]);
 
   return (
     <AuthContext.Provider
