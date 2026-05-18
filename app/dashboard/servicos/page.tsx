@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { servicesApi } from '@/lib/api';
 import type { Service } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ServicosSkeleton } from '@/components/skeletons/dashboard-skeleton';
 
 const serviceSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -77,11 +78,7 @@ export default function ServicosPage() {
 
   // Show loading state
   if (isLoadingData) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <ServicosSkeleton />;
   }
 
   // Show error state

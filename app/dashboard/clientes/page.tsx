@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { clientsApi } from '@/lib/api';
 import type { Client } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ClientesSkeleton } from '@/components/skeletons/dashboard-skeleton';
 
 const clientSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -71,11 +72,7 @@ export default function ClientesPage() {
 
   // Show loading state
   if (isLoadingData) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <ClientesSkeleton />;
   }
 
   // Show error state

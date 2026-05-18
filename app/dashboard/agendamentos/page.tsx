@@ -20,6 +20,7 @@ import { AppointmentForm } from '@/components/dashboard/appointment-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/lib/auth-context';
 import { useAutoMessagesConfig } from '@/contexts/auto-messages-context';
+import { AgendamentosSkeleton } from '@/components/skeletons/dashboard-skeleton';
 
 const statusColors: Record<AppointmentStatus, string> = {
   PENDING: 'bg-warning text-warning-foreground',
@@ -181,11 +182,7 @@ export default function AgendamentosPage() {
 
   // Show loading state
   if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AgendamentosSkeleton />;
   }
 
   // Show error state

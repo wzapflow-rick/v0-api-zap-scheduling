@@ -19,6 +19,7 @@ import { establishmentApi } from '@/lib/api';
 import type { Establishment } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AutomaticMessages } from '@/components/dashboard/automatic-messages';
+import { ConfiguracoesSkeleton } from '@/components/skeletons/dashboard-skeleton';
 
 // Business hours type - API returns with isOpen/openTime/closeTime but expects enabled/open/close
 type BusinessHoursAPI = {
@@ -211,11 +212,7 @@ export default function ConfiguracoesPage() {
 
   // Show loading state
   if (isLoadingData) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <ConfiguracoesSkeleton />;
   }
 
   // Show error state

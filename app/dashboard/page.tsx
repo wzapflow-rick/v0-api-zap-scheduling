@@ -29,6 +29,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { toast } from 'sonner';
+import { DashboardSkeleton } from '@/components/skeletons/dashboard-skeleton';
 
 const statusColors: Record<AppointmentStatus, string> = {
   PENDING: 'bg-warning/10 text-warning border-warning/20',
@@ -284,11 +285,7 @@ export default function DashboardPage() {
   }, [monthlyAppointments, todayStr]);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const formatCurrency = (value: number) => 
