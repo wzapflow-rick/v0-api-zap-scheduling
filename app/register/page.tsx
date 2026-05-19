@@ -10,8 +10,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Check, X, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Check, X, Eye, EyeOff, Mail, Lock, User, Phone, Building2, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getPasswordRequirements, getPasswordStrength, isPasswordValid, passwordSchema } from '@/lib/validators';
 import { cn } from '@/lib/utils';
@@ -33,7 +32,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 const strengthConfig = {
   fraca: { label: 'Fraca', color: 'bg-red-500', width: 'w-1/3' },
   media: { label: 'Média', color: 'bg-yellow-500', width: 'w-2/3' },
-  forte: { label: 'Forte', color: 'bg-green-500', width: 'w-full' },
+  forte: { label: 'Forte', color: 'bg-emerald-500', width: 'w-full' },
 };
 
 export default function RegisterPage() {
@@ -42,6 +41,7 @@ export default function RegisterPage() {
   const [lockTime, setLockTime] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const router = useRouter();
   const { register: registerUser } = useAuth();
 
@@ -115,93 +115,188 @@ export default function RegisterPage() {
     }
   };
 
+  const InputWrapper = ({ 
+    name, 
+    label, 
+    icon: Icon, 
+    children 
+  }: { 
+    name: string; 
+    label: string; 
+    icon: React.ElementType; 
+    children: React.ReactNode;
+  }) => (
+    <div className="space-y-2">
+      <Label 
+        htmlFor={name}
+        className={cn(
+          'text-sm font-medium transition-colors',
+          focusedField === name ? 'text-emerald-500' : 'text-foreground'
+        )}
+      >
+        {label}
+      </Label>
+      <div className="relative">
+        <div className={cn(
+          'absolute left-3 top-1/2 -translate-y-1/2 transition-colors z-10',
+          focusedField === name ? 'text-emerald-500' : 'text-muted-foreground'
+        )}>
+          <Icon className="h-5 w-5" />
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Criar Conta</CardTitle>
-        <CardDescription>
-          Comece a gerenciar seus agendamentos agora
-        </CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Seu Nome</Label>
-            <Input
-              id="name"
-              placeholder="João Silva"
-              {...register('name')}
-              disabled={isLoading || isLocked}
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
-            )}
-          </div>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          Criar conta
+        </h1>
+        <p className="text-muted-foreground">
+          Preencha os dados abaixo para começar
+        </p>
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="seu@email.com"
-              {...register('email')}
-              disabled={isLoading || isLocked}
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
+      {/* Form */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {/* Name Field */}
+        <InputWrapper name="name" label="Seu nome" icon={User}>
+          <Input
+            id="name"
+            placeholder="João Silva"
+            {...register('name')}
+            disabled={isLoading || isLocked}
+            onFocus={() => setFocusedField('name')}
+            onBlur={() => setFocusedField(null)}
+            className={cn(
+              'h-12 pl-11 bg-muted/50 border-border transition-all',
+              'focus:border-emerald-500 focus:ring-emerald-500/20 focus:bg-background',
+              errors.name && 'border-destructive focus:border-destructive'
             )}
-          </div>
+          />
+        </InputWrapper>
+        {errors.name && (
+          <p className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+            {errors.name.message}
+          </p>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefone/WhatsApp</Label>
-            <Input
-              id="phone"
-              placeholder="(11) 99999-9999"
-              {...register('phone')}
-              disabled={isLoading || isLocked}
-            />
-            {errors.phone && (
-              <p className="text-sm text-destructive">{errors.phone.message}</p>
+        {/* Email Field */}
+        <InputWrapper name="email" label="E-mail" icon={Mail}>
+          <Input
+            id="email"
+            type="email"
+            placeholder="seu@email.com"
+            {...register('email')}
+            disabled={isLoading || isLocked}
+            onFocus={() => setFocusedField('email')}
+            onBlur={() => setFocusedField(null)}
+            className={cn(
+              'h-12 pl-11 bg-muted/50 border-border transition-all',
+              'focus:border-emerald-500 focus:ring-emerald-500/20 focus:bg-background',
+              errors.email && 'border-destructive focus:border-destructive'
             )}
-          </div>
+          />
+        </InputWrapper>
+        {errors.email && (
+          <p className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+            {errors.email.message}
+          </p>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="establishmentName">Nome do Estabelecimento</Label>
-            <Input
-              id="establishmentName"
-              placeholder="Barbearia do João"
-              {...register('establishmentName')}
-              disabled={isLoading || isLocked}
-            />
-            {errors.establishmentName && (
-              <p className="text-sm text-destructive">{errors.establishmentName.message}</p>
+        {/* Phone Field */}
+        <InputWrapper name="phone" label="Telefone/WhatsApp" icon={Phone}>
+          <Input
+            id="phone"
+            placeholder="(11) 99999-9999"
+            {...register('phone')}
+            disabled={isLoading || isLocked}
+            onFocus={() => setFocusedField('phone')}
+            onBlur={() => setFocusedField(null)}
+            className={cn(
+              'h-12 pl-11 bg-muted/50 border-border transition-all',
+              'focus:border-emerald-500 focus:ring-emerald-500/20 focus:bg-background',
+              errors.phone && 'border-destructive focus:border-destructive'
             )}
-          </div>
+          />
+        </InputWrapper>
+        {errors.phone && (
+          <p className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+            {errors.phone.message}
+          </p>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Crie uma senha forte"
-                {...register('password')}
-                disabled={isLoading || isLocked}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading || isLocked}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+        {/* Establishment Field */}
+        <InputWrapper name="establishmentName" label="Nome do estabelecimento" icon={Building2}>
+          <Input
+            id="establishmentName"
+            placeholder="Barbearia do João"
+            {...register('establishmentName')}
+            disabled={isLoading || isLocked}
+            onFocus={() => setFocusedField('establishmentName')}
+            onBlur={() => setFocusedField(null)}
+            className={cn(
+              'h-12 pl-11 bg-muted/50 border-border transition-all',
+              'focus:border-emerald-500 focus:ring-emerald-500/20 focus:bg-background',
+              errors.establishmentName && 'border-destructive focus:border-destructive'
+            )}
+          />
+        </InputWrapper>
+        {errors.establishmentName && (
+          <p className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+            {errors.establishmentName.message}
+          </p>
+        )}
+
+        {/* Password Field */}
+        <div className="space-y-2">
+          <Label 
+            htmlFor="password"
+            className={cn(
+              'text-sm font-medium transition-colors',
+              focusedField === 'password' ? 'text-emerald-500' : 'text-foreground'
+            )}
+          >
+            Senha
+          </Label>
+          <div className="relative">
+            <div className={cn(
+              'absolute left-3 top-1/2 -translate-y-1/2 transition-colors z-10',
+              focusedField === 'password' ? 'text-emerald-500' : 'text-muted-foreground'
+            )}>
+              <Lock className="h-5 w-5" />
             </div>
-            
-            {/* Password strength indicator */}
-            {passwordValue.length > 0 && (
-              <div className="space-y-2">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Crie uma senha forte"
+              {...register('password')}
+              disabled={isLoading || isLocked}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => setFocusedField(null)}
+              className={cn(
+                'h-12 pl-11 pr-11 bg-muted/50 border-border transition-all',
+                'focus:border-emerald-500 focus:ring-emerald-500/20 focus:bg-background',
+                errors.password && 'border-destructive focus:border-destructive'
+              )}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              disabled={isLoading || isLocked}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors z-10"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
+          
+          {/* Password strength indicator */}
+          {passwordValue.length > 0 && (
+            <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="space-y-1.5">
                 <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className={cn('h-full transition-all duration-300', strengthInfo.color, strengthInfo.width)}
@@ -210,77 +305,133 @@ export default function RegisterPage() {
                 <p className="text-xs text-muted-foreground">
                   Força da senha: <span className="font-medium">{strengthInfo.label}</span>
                 </p>
-                
-                {/* Password requirements */}
-                <ul className="space-y-1 text-sm">
-                  {requirements.map((req) => (
-                    <li key={req.label} className="flex items-center gap-2">
-                      {req.met ? (
-                        <Check size={14} className="text-green-500" />
-                      ) : (
-                        <X size={14} className="text-red-500" />
-                      )}
-                      <span className={req.met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
-                        {req.label}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
               </div>
-            )}
-            
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-            <div className="relative">
-              <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                placeholder="Repita a senha"
-                {...register('confirmPassword')}
-                disabled={isLoading || isLocked}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                disabled={isLoading || isLocked}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50"
-              >
-                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+              
+              {/* Password requirements */}
+              <div className="grid grid-cols-2 gap-2">
+                {requirements.map((req) => (
+                  <div key={req.label} className="flex items-center gap-2 text-sm">
+                    {req.met ? (
+                      <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                    ) : (
+                      <X className="h-4 w-4 text-muted-foreground shrink-0" />
+                    )}
+                    <span className={cn(
+                      'text-xs',
+                      req.met ? 'text-emerald-500' : 'text-muted-foreground'
+                    )}>
+                      {req.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-            {errors.confirmPassword && (
-              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+          )}
+        </div>
+
+        {/* Confirm Password Field */}
+        <div className="space-y-2">
+          <Label 
+            htmlFor="confirmPassword"
+            className={cn(
+              'text-sm font-medium transition-colors',
+              focusedField === 'confirmPassword' ? 'text-emerald-500' : 'text-foreground'
             )}
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={isLoading || isLocked || !passwordIsValid}
           >
-            {isLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : isLocked ? (
-              `Aguarde ${lockTime}s`
-            ) : (
-              'Criar Conta'
-            )}
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            Já tem uma conta?{' '}
-            <Link href="/login" className="text-primary hover:underline">
-              Fazer login
-            </Link>
-          </p>
-        </CardFooter>
+            Confirmar senha
+          </Label>
+          <div className="relative">
+            <div className={cn(
+              'absolute left-3 top-1/2 -translate-y-1/2 transition-colors z-10',
+              focusedField === 'confirmPassword' ? 'text-emerald-500' : 'text-muted-foreground'
+            )}>
+              <Lock className="h-5 w-5" />
+            </div>
+            <Input
+              id="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="Repita a senha"
+              {...register('confirmPassword')}
+              disabled={isLoading || isLocked}
+              onFocus={() => setFocusedField('confirmPassword')}
+              onBlur={() => setFocusedField(null)}
+              className={cn(
+                'h-12 pl-11 pr-11 bg-muted/50 border-border transition-all',
+                'focus:border-emerald-500 focus:ring-emerald-500/20 focus:bg-background',
+                errors.confirmPassword && 'border-destructive focus:border-destructive'
+              )}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={isLoading || isLocked}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors z-10"
+            >
+              {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
+          {errors.confirmPassword && (
+            <p className="text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200">
+              {errors.confirmPassword.message}
+            </p>
+          )}
+        </div>
+
+        {/* Submit Button */}
+        <Button 
+          type="submit" 
+          className={cn(
+            'w-full h-12 text-base font-semibold transition-all',
+            'bg-emerald-500 hover:bg-emerald-600 text-white',
+            'shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40',
+            'group'
+          )}
+          disabled={isLoading || isLocked || !passwordIsValid}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Criando conta...
+            </>
+          ) : isLocked ? (
+            `Aguarde ${lockTime}s`
+          ) : (
+            <>
+              Criar conta
+              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </>
+          )}
+        </Button>
       </form>
-    </Card>
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="bg-background px-4 text-muted-foreground">
+            Já tem uma conta?
+          </span>
+        </div>
+      </div>
+
+      {/* Login Link */}
+      <div className="text-center">
+        <Link 
+          href="/login" 
+          className={cn(
+            'inline-flex items-center justify-center w-full h-12 px-6',
+            'text-base font-medium text-emerald-500',
+            'border-2 border-emerald-500/30 rounded-lg',
+            'hover:bg-emerald-500/10 hover:border-emerald-500/50',
+            'transition-all group'
+          )}
+        >
+          Fazer login
+          <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+        </Link>
+      </div>
+    </div>
   );
 }
