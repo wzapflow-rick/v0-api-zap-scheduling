@@ -76,44 +76,26 @@ function getRetryDelay(attempts: number): number {
   return delay + Math.random() * 1000;
 }
 
-// Check if backend is available
+// Check if backend is available by testing a simple API call
 export async function checkBackendAvailability(): Promise<boolean> {
+  // If browser is offline, backend is definitely not available
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    updateSyncStatusState({ isBackendAvailable: false });
+    return false;
+  }
+
   try {
-    // First check local app health
+    // Just check local app health - if the app is running, we consider it available
+    // The actual API calls will handle their own errors
     const localResponse = await fetch('/api/health', {
       method: 'GET',
       signal: AbortSignal.timeout(3000),
     });
     
-    if (!localResponse.ok) {
-      updateSyncStatusState({ isBackendAvailable: false });
-      return false;
-    }
-
-    // Then check the actual backend API
-    const response = await fetch('/api/proxy/health', {
-      method: 'GET',
-      signal: AbortSignal.timeout(5000),
-    });
-    const isAvailable = response.ok;
+    const isAvailable = localResponse.ok;
     updateSyncStatusState({ isBackendAvailable: isAvailable });
     return isAvailable;
   } catch {
-    // If backend check fails, still consider available if local health passed
-    // This allows offline mode to work when backend is down but app is running
-    try {
-      const localCheck = await fetch('/api/health', { 
-        method: 'GET',
-        signal: AbortSignal.timeout(2000),
-      });
-      if (localCheck.ok) {
-        // App is running but backend might be down - mark as unavailable to enable offline mode
-        updateSyncStatusState({ isBackendAvailable: false });
-        return false;
-      }
-    } catch {
-      // Both failed
-    }
     updateSyncStatusState({ isBackendAvailable: false });
     return false;
   }
