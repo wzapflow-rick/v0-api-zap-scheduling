@@ -117,8 +117,8 @@ export default function AssinaturaPage() {
     );
   };
 
-  // Loading state
-  if (isLoadingSubscription || isLoadingUsage) {
+  // Loading state - only wait for subscription, not usage
+  if (isLoadingSubscription) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -129,6 +129,25 @@ export default function AssinaturaPage() {
   // Safe access to plan price
   const planPrice = plan?.price ?? 0;
   const planName = plan?.name ?? 'Plano';
+  
+  // Safe access to usage data
+  const safeUsage = {
+    professionals: usage?.professionals ?? 0,
+    services: usage?.services ?? 0,
+    appointmentsThisMonth: usage?.appointmentsThisMonth ?? 0,
+  };
+  
+  const safeLimits = {
+    professionals: limits?.professionals ?? 0,
+    services: limits?.services ?? 0,
+    appointments: limits?.appointments ?? 0,
+  };
+  
+  const safePercentUsed = {
+    professionals: percentUsed?.professionals ?? 0,
+    services: percentUsed?.services ?? 0,
+    appointments: percentUsed?.appointments ?? 0,
+  };
 
   if (!hasActiveSubscription) {
     return (
@@ -251,53 +270,61 @@ export default function AssinaturaPage() {
           <CardDescription>Acompanhe o uso dos recursos do seu plano</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Professionals */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span>Profissionais</span>
-              </div>
-              <span className="text-muted-foreground">
-                {usage.professionals} / {(limits.professionals ?? 0) >= 999 ? 'Ilimitado' : limits.professionals}
-              </span>
+          {isLoadingUsage ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-            {(limits.professionals ?? 0) < 999 && (
-              <Progress value={percentUsed.professionals ?? 0} className="h-2" />
-            )}
-          </div>
+          ) : (
+            <>
+              {/* Professionals */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span>Profissionais</span>
+                  </div>
+                  <span className="text-muted-foreground">
+                    {safeUsage.professionals} / {safeLimits.professionals >= 999 ? 'Ilimitado' : safeLimits.professionals}
+                  </span>
+                </div>
+                {safeLimits.professionals < 999 && (
+                  <Progress value={safePercentUsed.professionals} className="h-2" />
+                )}
+              </div>
 
-          {/* Services */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-muted-foreground" />
-                <span>Servicos</span>
+              {/* Services */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span>Servicos</span>
+                  </div>
+                  <span className="text-muted-foreground">
+                    {safeUsage.services} / {safeLimits.services >= 999 ? 'Ilimitado' : safeLimits.services}
+                  </span>
+                </div>
+                {safeLimits.services < 999 && (
+                  <Progress value={safePercentUsed.services} className="h-2" />
+                )}
               </div>
-              <span className="text-muted-foreground">
-                {usage.services} / {(limits.services ?? 0) >= 999 ? 'Ilimitado' : limits.services}
-              </span>
-            </div>
-            {(limits.services ?? 0) < 999 && (
-              <Progress value={percentUsed.services ?? 0} className="h-2" />
-            )}
-          </div>
 
-          {/* Appointments */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>Agendamentos este mes</span>
+              {/* Appointments */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>Agendamentos este mes</span>
+                  </div>
+                  <span className="text-muted-foreground">
+                    {safeUsage.appointmentsThisMonth} / {safeLimits.appointments >= 999999 ? 'Ilimitado' : safeLimits.appointments}
+                  </span>
+                </div>
+                {safeLimits.appointments < 999999 && (
+                  <Progress value={safePercentUsed.appointments} className="h-2" />
+                )}
               </div>
-              <span className="text-muted-foreground">
-                {usage.appointmentsThisMonth} / {(limits.appointments ?? 0) >= 999999 ? 'Ilimitado' : limits.appointments}
-              </span>
-            </div>
-            {(limits.appointments ?? 0) < 999999 && (
-              <Progress value={percentUsed.appointments ?? 0} className="h-2" />
-            )}
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
