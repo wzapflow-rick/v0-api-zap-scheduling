@@ -6,6 +6,7 @@ import type { SubscriptionPermissions, PlanFeatures, TrialEligibility } from '@/
 
 const permissionsFetcher = async () => {
   const res = await subscriptionsApi.getPermissions();
+  console.log('[v0] Permissions API response:', res);
   if (!res.success) {
     return null;
   }
@@ -44,18 +45,30 @@ export function useSubscription() {
     retentionReports: false,
   };
 
-  // Verifica se tem assinatura ativa (incluindo trial)
-  const hasActiveSubscription = data?.hasActiveSubscription || false;
-  
-  // Verifica se esta em periodo de trial
-  const isTrialing = data?.subscription?.isTrialing || false;
-  const trialEndsAt = data?.subscription?.trialEndsAt || null;
-
   // Status da assinatura
   const subscriptionStatus = data?.subscription?.status || null;
+  
+  // Verifica se esta em periodo de trial
+  const isTrialing = data?.subscription?.isTrialing || subscriptionStatus === 'TRIALING';
+  const trialEndsAt = data?.subscription?.trialEndsAt || null;
 
   // Verifica se o trial expirou
   const isTrialExpired = subscriptionStatus === 'TRIAL_EXPIRED';
+
+  // Verifica se tem assinatura ativa (incluindo trial)
+  // hasActiveSubscription e true se: API diz que tem OU status e ACTIVE/TRIALING
+  const hasActiveSubscription = data?.hasActiveSubscription || 
+    subscriptionStatus === 'ACTIVE' || 
+    subscriptionStatus === 'TRIALING' ||
+    isTrialing;
+
+  console.log('[v0] useSubscription state:', { 
+    hasActiveSubscription, 
+    subscriptionStatus, 
+    isTrialing, 
+    isTrialExpired,
+    rawData: data 
+  });
 
   return {
     isLoading,
