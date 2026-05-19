@@ -43,15 +43,18 @@ import Link from 'next/link';
 export default function AssinaturaPage() {
   const router = useRouter();
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
   const { 
+    isLoading: isLoadingSubscription,
     hasActiveSubscription, 
     plan, 
     subscription, 
     isTrialing, 
     trialEndsAt,
+    trialDaysRemaining,
     refresh: refreshSubscription 
   } = useSubscription();
-  const { usage, limits, percentUsed, refresh: refreshUsage } = useUsage();
+  const { usage, limits, percentUsed, isLoading: isLoadingUsage, refresh: refreshUsage } = useUsage();
 
   const handleCancelSubscription = async () => {
     setIsCancelling(true);
@@ -71,19 +74,36 @@ export default function AssinaturaPage() {
     }
   };
 
+  const handleConvertToPaid = async () => {
+    setIsConverting(true);
+    try {
+      const result = await subscriptionsApi.convertTrialToPaid();
+      if (result.success && result.data) {
+        window.location.href = result.data.initPoint;
+      } else {
+        toast.error(result.error || 'Erro ao iniciar pagamento');
+      }
+    } catch {
+      toast.error('Erro ao conectar com o servidor');
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     return format(new Date(dateStr), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
 
   const getStatusBadge = () => {
-    if (!subscription) return null;
+    if (!subscription?.status) return null;
     
-    const statusConfig = {
-      ACTIVE: { label: 'Ativa', variant: 'default' as const, icon: CheckCircle2 },
-      TRIALING: { label: 'Período de Teste', variant: 'secondary' as const, icon: Clock },
-      PAST_DUE: { label: 'Pagamento Atrasado', variant: 'destructive' as const, icon: AlertTriangle },
-      CANCELLED: { label: 'Cancelada', variant: 'outline' as const, icon: AlertTriangle },
-      INACTIVE: { label: 'Inativa', variant: 'outline' as const, icon: AlertTriangle },
+    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof CheckCircle2 }> = {
+      ACTIVE: { label: 'Ativa', variant: 'default', icon: CheckCircle2 },
+      TRIALING: { label: 'Periodo de Teste', variant: 'secondary', icon: Clock },
+      TRIAL_EXPIRED: { label: 'Teste Expirado', variant: 'destructive', icon: AlertTriangle },
+      PAST_DUE: { label: 'Pagamento Atrasado', variant: 'destructive', icon: AlertTriangle },
+      CANCELLED: { label: 'Cancelada', variant: 'outline', icon: AlertTriangle },
+      INACTIVE: { label: 'Inativa', variant: 'outline', icon: AlertTriangle },
     };
 
     const config = statusConfig[subscription.status] || statusConfig.INACTIVE;
@@ -96,6 +116,15 @@ export default function AssinaturaPage() {
       </Badge>
     );
   };
+
+  // Loading state
+  if (isLoadingSubscription) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!hasActiveSubscription) {
     return (
@@ -135,15 +164,24 @@ export default function AssinaturaPage() {
       {/* Trial Alert */}
       {isTrialing && trialEndsAt && (
         <Card className="border-primary/50 bg-primary/5">
-          <CardContent className="flex items-center gap-4 py-4">
+          <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center">
             <Clock className="h-5 w-5 text-primary" />
             <div className="flex-1">
-              <p className="font-medium">Período de Teste</p>
+              <p className="font-medium">Periodo de Teste - {trialDaysRemaining} dias restantes</p>
               <p className="text-sm text-muted-foreground">
                 Seu teste gratuito termina em {formatDate(trialEndsAt)}
               </p>
             </div>
-            <Button size="sm">Assinar Agora</Button>
+            <Button size="sm" onClick={handleConvertToPaid} disabled={isConverting}>
+              {isConverting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                'Assinar Agora'
+              )}
+            </Button>
           </CardContent>
         </Card>
       )}
