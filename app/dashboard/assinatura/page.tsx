@@ -90,8 +90,13 @@ export default function AssinaturaPage() {
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    return format(new Date(dateStr), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return '-';
+    try {
+      return format(new Date(dateStr), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+    } catch {
+      return '-';
+    }
   };
 
   const getStatusBadge = () => {
