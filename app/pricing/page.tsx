@@ -236,8 +236,10 @@ function PricingContent() {
       return;
     }
 
-    // Se pode fazer trial deste plano
-    if (canTrial && trialPlanIds.includes(plan.id) && plan.trialDays > 0) {
+    // Se plano tem trial E usuario pode fazer trial, usar endpoint de trial
+    const shouldStartTrial = plan.trialDays > 0 && (canTrial || (!hasActiveSubscription && !isTrialExpired));
+    
+    if (shouldStartTrial) {
       await handleStartTrial(plan);
       return;
     }
