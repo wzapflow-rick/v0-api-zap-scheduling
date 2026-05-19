@@ -6,7 +6,6 @@ import type { SubscriptionPermissions, PlanFeatures, TrialEligibility } from '@/
 
 const permissionsFetcher = async () => {
   const res = await subscriptionsApi.getPermissions();
-  console.log('[v0] Permissions API response:', res);
   if (!res.success) {
     return null;
   }
@@ -61,14 +60,6 @@ export function useSubscription() {
     subscriptionStatus === 'ACTIVE' || 
     subscriptionStatus === 'TRIALING' ||
     isTrialing;
-
-  console.log('[v0] useSubscription state:', { 
-    hasActiveSubscription, 
-    subscriptionStatus, 
-    isTrialing, 
-    isTrialExpired,
-    rawData: data 
-  });
 
   return {
     isLoading,

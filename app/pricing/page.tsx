@@ -165,9 +165,6 @@ function PricingContent() {
   const isFromApi = data?.isFromApi || false;
   const isFallback = !isFromApi || FALLBACK_PLAN_IDS.includes(plans[0]?.id);
 
-  // IDs dos planos disponiveis para trial
-  const trialPlanIds = trialAvailablePlans.map(p => p.id);
-
   const handleStartTrial = async (plan: Plan) => {
     if (!user) {
       router.push(`/register?plan=${plan.name.toLowerCase()}`);
@@ -224,15 +221,6 @@ function PricingContent() {
     if (hasActiveSubscription && !isTrialExpired && currentPlan?.id !== plan.id) {
       toast.info('Para trocar de plano, acesse a pagina de assinatura');
       router.push('/dashboard/assinatura');
-      return;
-    }
-
-    // Se e o plano Elite, abre WhatsApp para vendas
-    if (plan.name === 'Elite') {
-      const message = encodeURIComponent(
-        `Ola! Tenho interesse no plano Elite do ZapAgenda. Gostaria de mais informacoes.`
-      );
-      window.open(`https://wa.me/5511999999999?text=${message}`, '_blank');
       return;
     }
 
@@ -325,13 +313,9 @@ function PricingContent() {
     if (hasActiveSubscription && currentPlan?.id === plan.id && !isTrialExpired) {
       return 'Plano Atual';
     }
-    
-    if (plan.name === 'Elite') {
-      return 'Falar com Vendas';
-    }
 
     // Se pode fazer trial deste plano
-    if (canTrial && trialPlanIds.includes(plan.id) && plan.trialDays > 0) {
+    if (canTrial && plan.trialDays > 0) {
       return `Testar Gratis por ${plan.trialDays} dias`;
     }
 
@@ -454,7 +438,7 @@ function PricingContent() {
             const { reais, centavos } = formatPrice(plan.price);
             const features = getPlanFeaturesList(plan);
             const isSubscribing = subscribingPlanId === plan.id;
-            const canTrialThisPlan = canTrial && trialPlanIds.includes(plan.id) && plan.trialDays > 0;
+            const canTrialThisPlan = canTrial && plan.trialDays > 0;
 
             return (
               <Card
@@ -525,14 +509,14 @@ function PricingContent() {
                     variant={isCurrent ? 'secondary' : (isProfessional || canTrialThisPlan ? 'default' : 'outline')}
                     size="lg"
                     onClick={() => handleSubscribe(plan)}
-                    disabled={isSubscribing || isCurrent || (isFallback && plan.name !== 'Elite')}
+                    disabled={isSubscribing || isCurrent || isFallback}
                   >
                     {isSubscribing ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         {isStartingTrial ? 'Iniciando teste...' : 'Processando...'}
                       </>
-                    ) : isFallback && plan.name !== 'Elite' ? (
+                    ) : isFallback ? (
                       'Indisponivel'
                     ) : (
                       <>
