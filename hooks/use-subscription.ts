@@ -2,12 +2,19 @@
 
 import useSWR from 'swr';
 import { subscriptionsApi } from '@/lib/api';
-import type { SubscriptionPermissions, PlanFeatures } from '@/types';
+import type { SubscriptionPermissions, PlanFeatures, TrialEligibility } from '@/types';
 
 const permissionsFetcher = async () => {
   const res = await subscriptionsApi.getPermissions();
   if (!res.success) {
-    // Retorna null para indicar sem assinatura (nao e um erro)
+    return null;
+  }
+  return res.data;
+};
+
+const trialEligibilityFetcher = async () => {
+  const res = await subscriptionsApi.checkTrialEligibility();
+  if (!res.success) {
     return null;
   }
   return res.data;
@@ -19,7 +26,6 @@ export function useSubscription() {
     permissionsFetcher,
     { 
       revalidateOnFocus: false,
-      // Nao trata como erro quando nao ha assinatura
       shouldRetryOnError: false,
     }
   );
@@ -48,6 +54,9 @@ export function useSubscription() {
   // Status da assinatura
   const subscriptionStatus = data?.subscription?.status || null;
 
+  // Verifica se o trial expirou
+  const isTrialExpired = subscriptionStatus === 'TRIAL_EXPIRED';
+
   return {
     isLoading,
     error,
@@ -69,6 +78,7 @@ export function useSubscription() {
     // Trial info
     isTrialing,
     trialEndsAt,
+    isTrialExpired,
     subscriptionStatus,
     
     // Verifica se a assinatura esta vencida ou com problema
@@ -80,6 +90,28 @@ export function useSubscription() {
       ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
       : null,
     
+    refresh: mutate,
+  };
+}
+
+export function useTrialEligibility() {
+  const { data, error, isLoading, mutate } = useSWR<TrialEligibility | null>(
+    'trial-eligibility',
+    trialEligibilityFetcher,
+    { 
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
+  );
+
+  return {
+    isLoading,
+    error,
+    canTrial: data?.canTrial || false,
+    reason: data?.reason || null,
+    availablePlans: data?.availablePlans || [],
+    previousTrials: data?.previousTrials || [],
+    currentSubscription: data?.currentSubscription || null,
     refresh: mutate,
   };
 }

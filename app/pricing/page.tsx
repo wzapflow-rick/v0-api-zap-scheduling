@@ -1,19 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Check, Loader2, Sparkles, AlertCircle, CheckCircle2, ExternalLink, Calendar } from 'lucide-react';
+import { Check, Loader2, Sparkles, AlertCircle, CheckCircle2, ExternalLink, Calendar, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { subscriptionsApi } from '@/lib/api';
 import { toast } from 'sonner';
-import type { Plan } from '@/types';
+import type { Plan, TrialEligibility } from '@/types';
 import { useAuth } from '@/lib/auth-context';
-import { useSubscription } from '@/hooks/use-subscription';
+import { useSubscription, useTrialEligibility } from '@/hooks/use-subscription';
 import Link from 'next/link';
 
 // Planos estaticos como fallback quando a API nao esta disponivel
@@ -100,9 +100,7 @@ const FALLBACK_PLAN_IDS = ['essencial', 'professional', 'elite'];
 const plansFetcher = async (): Promise<{ plans: Plan[]; isFromApi: boolean }> => {
   const res = await subscriptionsApi.getPlans();
   
-  // Check if we have valid data
   if (res.success && res.data && Array.isArray(res.data) && res.data.length > 0) {
-    // Validate that plans have required fields
     const validPlans = res.data.filter(plan => 
       plan && plan.id && plan.name && typeof plan.price !== 'undefined'
     );
@@ -112,7 +110,6 @@ const plansFetcher = async (): Promise<{ plans: Plan[]; isFromApi: boolean }> =>
     }
   }
   
-  // If the response has data but in different format, try to extract it
   if (res.success && res.data && !Array.isArray(res.data)) {
     const possiblePlans = (res.data as any).plans || (res.data as any).items || Object.values(res.data);
     if (Array.isArray(possiblePlans) && possiblePlans.length > 0) {
@@ -125,9 +122,25 @@ const plansFetcher = async (): Promise<{ plans: Plan[]; isFromApi: boolean }> =>
 
 export default function PricingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { hasActiveSubscription, plan: currentPlan, subscription, isTrialing, trialEndsAt } = useSubscription();
+  const { 
+    hasActiveSubscription, 
+    plan: currentPlan, 
+    isTrialing, 
+    trialEndsAt,
+    isTrialExpired,
+    refresh: refreshSubscription 
+  } = useSubscription();
+  const { 
+    canTrial, 
+    availablePlans: trialAvailablePlans, 
+    reason: trialReason,
+    refresh: refreshTrialEligibility 
+  } = useTrialEligibility();
+  
   const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(null);
+  const [isStartingTrial, setIsStartingTrial] = useState(false);
   
   const { data, isLoading } = useSWR<{ plans: Plan[]; isFromApi: boolean }>('plans', plansFetcher, {
     revalidateOnFocus: false,
@@ -138,8 +151,57 @@ export default function PricingPage() {
   const isFromApi = data?.isFromApi || false;
   const isFallback = !isFromApi || FALLBACK_PLAN_IDS.includes(plans[0]?.id);
 
+  // IDs dos planos disponiveis para trial
+  const trialPlanIds = trialAvailablePlans.map(p => p.id);
+
+  // Verifica se o usuario acabou de iniciar o trial (vindo do redirect)
+  useEffect(() => {
+    if (searchParams.get('trial') === 'started') {
+      toast.success('Seu periodo de teste foi iniciado com sucesso!');
+      router.replace('/pricing');
+    }
+  }, [searchParams, router]);
+
+  const handleStartTrial = async (plan: Plan) => {
+    if (!user) {
+      router.push(`/register?plan=${plan.name.toLowerCase()}`);
+      return;
+    }
+
+    setIsStartingTrial(true);
+    setSubscribingPlanId(plan.id);
+    
+    try {
+      const result = await subscriptionsApi.startTrial(plan.id);
+      
+      if (result.success && result.data) {
+        toast.success(`Seu teste gratis de ${result.data.trialDays} dias foi iniciado!`);
+        await refreshSubscription();
+        await refreshTrialEligibility();
+        router.push('/dashboard?trial=started');
+      } else {
+        const errorMessage = result.error || 'Erro ao iniciar teste gratis';
+        
+        if (errorMessage.toLowerCase().includes('ja utilizou') || 
+            errorMessage.toLowerCase().includes('already used')) {
+          toast.error('Voce ja utilizou seu periodo de teste gratuito.');
+        } else if (errorMessage.toLowerCase().includes('ja possui') || 
+                   errorMessage.toLowerCase().includes('already has')) {
+          toast.error('Voce ja possui uma assinatura ativa.');
+          router.push('/dashboard/assinatura');
+        } else {
+          toast.error(errorMessage);
+        }
+      }
+    } catch {
+      toast.error('Erro ao conectar com o servidor. Tente novamente.');
+    } finally {
+      setIsStartingTrial(false);
+      setSubscribingPlanId(null);
+    }
+  };
+
   const handleSubscribe = async (plan: Plan) => {
-    // Se nao esta logado, redireciona para registro
     if (!user) {
       router.push(`/register?plan=${plan.name.toLowerCase()}`);
       return;
@@ -152,8 +214,8 @@ export default function PricingPage() {
       return;
     }
 
-    // Se ja tem assinatura ativa de outro plano
-    if (hasActiveSubscription && currentPlan?.id !== plan.id) {
+    // Se ja tem assinatura ativa de outro plano (e nao esta em trial expirado)
+    if (hasActiveSubscription && !isTrialExpired && currentPlan?.id !== plan.id) {
       toast.info('Para trocar de plano, acesse a pagina de assinatura');
       router.push('/dashboard/assinatura');
       return;
@@ -168,6 +230,13 @@ export default function PricingPage() {
       return;
     }
 
+    // Se pode fazer trial deste plano
+    if (canTrial && trialPlanIds.includes(plan.id) && plan.trialDays > 0) {
+      await handleStartTrial(plan);
+      return;
+    }
+
+    // Se nao pode fazer trial, vai direto para pagamento
     setSubscribingPlanId(plan.id);
     try {
       const result = await subscriptionsApi.create(plan.id);
@@ -245,24 +314,53 @@ export default function PricingPage() {
 
   const getCta = (plan: Plan) => {
     // Se usuario ja tem este plano
-    if (hasActiveSubscription && currentPlan?.id === plan.id) {
+    if (hasActiveSubscription && currentPlan?.id === plan.id && !isTrialExpired) {
       return 'Plano Atual';
     }
     
     if (plan.name === 'Elite') {
       return 'Falar com Vendas';
     }
-    if (plan.trialDays > 0 && !hasActiveSubscription) {
-      return 'Comecar Teste Gratis';
+
+    // Se pode fazer trial deste plano
+    if (canTrial && trialPlanIds.includes(plan.id) && plan.trialDays > 0) {
+      return `Testar Gratis por ${plan.trialDays} dias`;
     }
+
+    // Se ja usou trial ou trial expirado, vai direto para pagamento
+    if (trialReason === 'already_used_trial' || isTrialExpired) {
+      return 'Assinar Agora';
+    }
+
     if (hasActiveSubscription) {
       return 'Alterar Plano';
     }
-    return 'Comecar Agora';
+
+    // Default - verificar se plano tem trial
+    if (plan.trialDays > 0) {
+      return 'Comecar Teste Gratis';
+    }
+
+    return 'Assinar Agora';
   };
 
   const isCurrentPlan = (plan: Plan) => {
-    return hasActiveSubscription && currentPlan?.id === plan.id;
+    return hasActiveSubscription && currentPlan?.id === plan.id && !isTrialExpired;
+  };
+
+  const getTrialReasonMessage = () => {
+    switch (trialReason) {
+      case 'already_has_active_subscription':
+        return 'Voce ja possui uma assinatura ativa.';
+      case 'already_used_trial':
+        return 'Voce ja utilizou seu periodo de teste gratuito.';
+      case 'trial_disabled_globally':
+        return 'O periodo de teste nao esta disponivel no momento.';
+      case 'no_plans_with_trial':
+        return 'Nenhum plano com periodo de teste disponivel.';
+      default:
+        return null;
+    }
   };
 
   if (isLoading) {
@@ -292,34 +390,30 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* API Warning for development */}
-        {isFallback && user && (
+        {/* Trial expired alert */}
+        {user && isTrialExpired && (
+          <Alert className="mx-auto mt-8 max-w-2xl border-red-500/30 bg-red-500/5">
+            <AlertCircle className="h-4 w-4 text-red-500" />
+            <AlertTitle className="text-red-500">Seu periodo de teste expirou</AlertTitle>
+            <AlertDescription className="mt-2 text-red-500/80">
+              Para continuar usando o ZapAgenda, escolha um plano abaixo e assine agora.
+              Seus dados estao salvos e voce pode continuar de onde parou!
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Trial reason alert (if can't trial) */}
+        {user && !canTrial && trialReason && trialReason !== 'already_has_active_subscription' && !isTrialExpired && (
           <Alert className="mx-auto mt-8 max-w-2xl border-amber-500/30 bg-amber-500/5">
             <AlertCircle className="h-4 w-4 text-amber-500" />
-            <AlertTitle className="text-amber-500">Sistema de pagamento em manutencao</AlertTitle>
-            <AlertDescription className="mt-2 text-amber-500/80">
-              O sistema de assinaturas esta temporariamente indisponivel. 
-              Por favor, entre em contato via WhatsApp para assinar um plano.
-              <div className="mt-3">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
-                  onClick={() => {
-                    const message = encodeURIComponent('Ola! Gostaria de assinar um plano do ZapAgenda.');
-                    window.open(`https://wa.me/5511999999999?text=${message}`, '_blank');
-                  }}
-                >
-                  Falar com Suporte
-                  <ExternalLink className="ml-2 h-3 w-3" />
-                </Button>
-              </div>
+            <AlertDescription className="text-amber-500/80">
+              {getTrialReasonMessage()}
             </AlertDescription>
           </Alert>
         )}
 
         {/* Current subscription alert */}
-        {user && hasActiveSubscription && (
+        {user && hasActiveSubscription && !isTrialExpired && (
           <Alert className="mx-auto mt-8 max-w-2xl border-primary/30 bg-primary/5">
             <CheckCircle2 className="h-4 w-4 text-primary" />
             <AlertTitle>Voce ja possui uma assinatura ativa</AlertTitle>
@@ -352,6 +446,7 @@ export default function PricingPage() {
             const { reais, centavos } = formatPrice(plan.price);
             const features = getPlanFeaturesList(plan);
             const isSubscribing = subscribingPlanId === plan.id;
+            const canTrialThisPlan = canTrial && trialPlanIds.includes(plan.id) && plan.trialDays > 0;
 
             return (
               <Card
@@ -393,10 +488,13 @@ export default function PricingPage() {
                     <span className="text-4xl font-bold text-foreground">R$ {reais}</span>
                     <span className="text-xl text-foreground">,{centavos}</span>
                     <span className="text-muted-foreground">/mes</span>
-                    {plan.trialDays > 0 && !hasActiveSubscription && (
-                      <p className="mt-1 text-sm text-primary">
-                        {plan.trialDays} dias gratis para testar
-                      </p>
+                    {plan.trialDays > 0 && canTrialThisPlan && (
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <Gift className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium text-primary">
+                          {plan.trialDays} dias gratis para testar
+                        </span>
+                      </div>
                     )}
                   </div>
 
@@ -412,8 +510,11 @@ export default function PricingPage() {
 
                   {/* CTA */}
                   <Button
-                    className="w-full"
-                    variant={isCurrent ? 'secondary' : (isProfessional ? 'default' : 'outline')}
+                    className={cn(
+                      "w-full",
+                      canTrialThisPlan && !isCurrent && "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90"
+                    )}
+                    variant={isCurrent ? 'secondary' : (isProfessional || canTrialThisPlan ? 'default' : 'outline')}
                     size="lg"
                     onClick={() => handleSubscribe(plan)}
                     disabled={isSubscribing || isCurrent || (isFallback && plan.name !== 'Elite')}
@@ -421,12 +522,15 @@ export default function PricingPage() {
                     {isSubscribing ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processando...
+                        {isStartingTrial ? 'Iniciando teste...' : 'Processando...'}
                       </>
                     ) : isFallback && plan.name !== 'Elite' ? (
                       'Indisponivel'
                     ) : (
-                      getCta(plan)
+                      <>
+                        {canTrialThisPlan && !isCurrent && <Gift className="mr-2 h-4 w-4" />}
+                        {getCta(plan)}
+                      </>
                     )}
                   </Button>
                 </CardContent>
@@ -438,7 +542,11 @@ export default function PricingPage() {
         {/* Footer info */}
         <div className="mt-12 text-center">
           <p className="text-sm text-muted-foreground">
-            Pagamento seguro via Mercado Pago. Cancele quando quiser, sem burocracia.
+            {canTrial ? (
+              <>Teste gratis por 7 dias, sem precisar de cartao de credito.</>
+            ) : (
+              <>Pagamento seguro via Mercado Pago. Cancele quando quiser, sem burocracia.</>
+            )}
           </p>
           {!user && (
             <p className="mt-2 text-sm text-muted-foreground">

@@ -1,6 +1,41 @@
 // Enums
 export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
-export type SubscriptionStatus = 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'TRIALING' | 'INACTIVE';
+export type SubscriptionStatus = 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'TRIALING' | 'TRIAL_EXPIRED' | 'INACTIVE';
+
+// Trial eligibility response
+export interface TrialEligibility {
+  canTrial: boolean;
+  reason: 'already_has_active_subscription' | 'already_used_trial' | 'trial_disabled_globally' | 'no_plans_with_trial' | null;
+  availablePlans: Array<{
+    id: string;
+    name: string;
+    trialDays: number;
+    price: number;
+  }>;
+  previousTrials: Array<{
+    planId: string;
+    planName: string;
+    startedAt: string;
+  }>;
+  currentSubscription: Subscription | null;
+}
+
+// Trial start response
+export interface TrialStartResponse {
+  subscription: {
+    id: string;
+    status: SubscriptionStatus;
+    isTrial: boolean;
+    trialEndsAt: string;
+    plan: {
+      id: string;
+      name: string;
+      price: number;
+    };
+  };
+  trialDays: number;
+  trialEndsAt: string;
+}
 
 // Interfaces principais
 export interface User {

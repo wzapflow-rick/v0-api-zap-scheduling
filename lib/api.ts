@@ -15,6 +15,8 @@ import type {
   SlotsResponse,
   SubscriptionPermissions,
   SubscriptionUsage,
+  TrialEligibility,
+  TrialStartResponse,
 } from '@/types';
 
 // Use proxy to avoid CORS issues
@@ -290,6 +292,9 @@ export const subscriptionsApi = {
   // GET /api/subscriptions - Get current subscription
   get: () => apiFetch<{ subscription: Subscription | null; plan: Plan | null; isActive: boolean }>('/subscriptions'),
   
+  // GET /api/subscriptions/me - Get subscription with trial info
+  me: () => apiFetch<Subscription>('/subscriptions/me'),
+  
   // GET /api/plans - List available plans (public)
   getPlans: () => apiFetch<Plan[]>('/plans'),
   
@@ -302,6 +307,25 @@ export const subscriptionsApi = {
     }>('/subscriptions', {
       method: 'POST',
       body: JSON.stringify({ planId }),
+    }),
+  
+  // GET /api/subscriptions/trial - Check trial eligibility
+  checkTrialEligibility: () => apiFetch<TrialEligibility>('/subscriptions/trial'),
+  
+  // POST /api/subscriptions/trial - Start trial
+  startTrial: (planId: string) =>
+    apiFetch<TrialStartResponse>('/subscriptions/trial', {
+      method: 'POST',
+      body: JSON.stringify({ planId }),
+    }),
+  
+  // POST /api/subscriptions/convert - Convert trial to paid
+  convertTrialToPaid: () =>
+    apiFetch<{
+      preferenceId: string;
+      initPoint: string;
+    }>('/subscriptions/convert', {
+      method: 'POST',
     }),
   
   // GET /api/subscriptions/permissions - Get permissions and features
