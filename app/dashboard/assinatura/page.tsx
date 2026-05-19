@@ -122,21 +122,6 @@ export default function AssinaturaPage() {
     );
   };
 
-  // Debug log
-  console.log('[v0] AssinaturaPage state:', { 
-    isLoadingSubscription, 
-    hasActiveSubscription, 
-    plan, 
-    subscription,
-    isTrialing,
-    trialEndsAt,
-    trialDaysRemaining,
-    isLoadingUsage,
-    usage,
-    limits,
-    percentUsed
-  });
-
   // Loading state - only wait for subscription, not usage
   if (isLoadingSubscription) {
     return (
@@ -146,8 +131,8 @@ export default function AssinaturaPage() {
     );
   }
 
-  // Safe access to plan price
-  const planPrice = plan?.price ?? 0;
+  // Safe access to plan price - convert to number in case API returns string
+  const planPrice = Number(plan?.price) || 0;
   const planName = plan?.name ?? 'Plano';
   
   // Safe access to usage data
