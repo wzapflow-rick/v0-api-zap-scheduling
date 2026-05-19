@@ -6,23 +6,29 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Loader2, Sparkles } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Check, Loader2, Sparkles, AlertCircle, CheckCircle2, ExternalLink, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { subscriptionsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import type { Plan } from '@/types';
 import { useAuth } from '@/lib/auth-context';
+import { useSubscription } from '@/hooks/use-subscription';
+import Link from 'next/link';
 
-// Planos estáticos como fallback quando a API não está disponível
+// Planos estaticos como fallback quando a API nao esta disponivel
 const FALLBACK_PLANS: Plan[] = [
   {
     id: 'essencial',
     name: 'Essencial',
-    description: 'Ideal para profissionais independentes que estão começando a organizar sua agenda.',
+    description: 'Ideal para profissionais independentes que estao comecando a organizar sua agenda.',
     price: 49.90,
+    interval: 'MONTHLY',
     maxProfessionals: 1,
+    maxServices: 10,
     maxAppointments: 100,
     trialDays: 7,
+    active: true,
     features: {
       whatsappAutomations: 3,
       bookingPage: true,
@@ -36,17 +42,18 @@ const FALLBACK_PLANS: Plan[] = [
       advancedBI: false,
       retentionReports: false,
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   },
   {
     id: 'professional',
     name: 'Professional',
-    description: 'O favorito de barbearias e salões que possuem equipe e querem reduzir as faltas.',
+    description: 'O favorito de barbearias e saloes que possuem equipe e querem reduzir as faltas.',
     price: 119.90,
+    interval: 'MONTHLY',
     maxProfessionals: 5,
+    maxServices: 50,
     maxAppointments: 999999,
     trialDays: 7,
+    active: true,
     features: {
       whatsappAutomations: 999,
       bookingPage: true,
@@ -60,17 +67,18 @@ const FALLBACK_PLANS: Plan[] = [
       advancedBI: false,
       retentionReports: false,
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   },
   {
     id: 'elite',
     name: 'Elite',
-    description: 'Ideal para estabelecimentos de grande porte ou redes com múltiplos profissionais.',
+    description: 'Ideal para estabelecimentos de grande porte ou redes com multiplos profissionais.',
     price: 249.90,
+    interval: 'MONTHLY',
     maxProfessionals: 999,
+    maxServices: 999,
     maxAppointments: 999999,
     trialDays: 7,
+    active: true,
     features: {
       whatsappAutomations: 999,
       bookingPage: true,
@@ -84,15 +92,12 @@ const FALLBACK_PLANS: Plan[] = [
       advancedBI: true,
       retentionReports: true,
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   },
 ];
 
 const plansFetcher = async () => {
   const res = await subscriptionsApi.getPlans();
   if (!res.success || !res.data || res.data.length === 0) {
-    // Retorna planos estáticos como fallback
     return FALLBACK_PLANS;
   }
   return res.data;
@@ -101,6 +106,7 @@ const plansFetcher = async () => {
 export default function PricingPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { hasActiveSubscription, plan: currentPlan, subscription, isTrialing, trialEndsAt } = useSubscription();
   const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(null);
   
   const { data: plans, isLoading } = useSWR<Plan[]>('plans', plansFetcher, {
@@ -109,8 +115,25 @@ export default function PricingPage() {
   });
 
   const handleSubscribe = async (plan: Plan) => {
+    // Se nao esta logado, redireciona para registro
     if (!user) {
       router.push(`/register?plan=${plan.name.toLowerCase()}`);
+      return;
+    }
+
+    // Se ja tem assinatura ativa do mesmo plano
+    if (hasActiveSubscription && currentPlan?.id === plan.id) {
+      toast.info('Voce ja possui este plano ativo');
+      router.push('/dashboard/assinatura');
+      return;
+    }
+
+    // Se e o plano Elite, abre WhatsApp para vendas
+    if (plan.name === 'Elite') {
+      const message = encodeURIComponent(
+        `Ola! Tenho interesse no plano Elite do ZapAgenda. Gostaria de mais informacoes.`
+      );
+      window.open(`https://wa.me/5511999999999?text=${message}`, '_blank');
       return;
     }
 
@@ -119,20 +142,33 @@ export default function PricingPage() {
       const result = await subscriptionsApi.create(plan.id);
       
       if (result.success && result.data) {
-        // Redirect to Mercado Pago checkout
+        // Redireciona para checkout do Mercado Pago
         window.location.href = result.data.initPoint;
       } else {
-        toast.error(result.error || 'Erro ao iniciar pagamento');
+        // Trata erros especificos
+        const errorMessage = result.error || 'Erro ao iniciar pagamento';
+        
+        if (errorMessage.toLowerCase().includes('ja possui') || 
+            errorMessage.toLowerCase().includes('already') ||
+            errorMessage.toLowerCase().includes('existing')) {
+          toast.error('Voce ja possui uma assinatura. Acesse sua conta para gerenciar.');
+          router.push('/dashboard/assinatura');
+        } else if (errorMessage.toLowerCase().includes('invalid') || 
+                   errorMessage.toLowerCase().includes('invalido')) {
+          toast.error('Erro de configuracao. Por favor, tente novamente ou entre em contato.');
+        } else {
+          toast.error(errorMessage);
+        }
       }
-    } catch {
-      toast.error('Erro ao conectar com o servidor');
+    } catch (error) {
+      console.error('[v0] Error subscribing:', error);
+      toast.error('Erro ao conectar com o servidor. Tente novamente.');
     } finally {
       setSubscribingPlanId(null);
     }
   };
 
   const formatPrice = (price: number | string) => {
-    // Converte para número caso venha como string da API
     const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
     const [reais, centavos] = numericPrice.toFixed(2).split('.');
     return { reais, centavos };
@@ -141,52 +177,60 @@ export default function PricingPage() {
   const getPlanFeaturesList = (plan: Plan): string[] => {
     const features: string[] = [];
     
-    // Profissionais
     if (plan.maxProfessionals >= 999) {
       features.push('Profissionais ilimitados');
     } else if (plan.maxProfessionals === 1) {
       features.push('1 Profissional');
     } else {
-      features.push(`Até ${plan.maxProfessionals} Profissionais`);
+      features.push(`Ate ${plan.maxProfessionals} Profissionais`);
     }
     
-    // Agendamentos
     if (plan.maxAppointments >= 999999) {
       features.push('Agendamentos ilimitados');
     } else {
-      features.push(`${plan.maxAppointments} Agendamentos/mês`);
+      features.push(`${plan.maxAppointments} Agendamentos/mes`);
     }
     
-    // WhatsApp
     if (plan.features.whatsappAutomations >= 999) {
-      features.push('Todas as automações de WhatsApp');
+      features.push('Todas as automacoes de WhatsApp');
     } else {
-      features.push(`${plan.features.whatsappAutomations} Automações de WhatsApp`);
+      features.push(`${plan.features.whatsappAutomations} Automacoes de WhatsApp`);
     }
     
-    // Features booleanas
-    if (plan.features.bookingPage) features.push('Página de agendamento exclusiva');
+    if (plan.features.bookingPage) features.push('Pagina de agendamento exclusiva');
     if (plan.features.instagramBioLink) features.push('Link personalizado para Bio do Instagram');
     if (plan.features.onlinePayment) features.push('Checkout online (sinal ou integral)');
     if (plan.features.financialDashboard) features.push('Painel financeiro por profissional');
-    if (plan.features.prioritySupport) features.push('Suporte prioritário via WhatsApp');
+    if (plan.features.prioritySupport) features.push('Suporte prioritario via WhatsApp');
     if (plan.features.recurringAppointments) features.push('Agendamentos recorrentes');
-    if (plan.features.paymentSplit) features.push('Split de pagamento automático');
+    if (plan.features.paymentSplit) features.push('Split de pagamento automatico');
     if (plan.features.waitlist) features.push('Lista de espera inteligente');
-    if (plan.features.advancedBI) features.push('Dashboard avançado (BI)');
-    if (plan.features.retentionReports) features.push('Relatórios de retenção e produtividade');
+    if (plan.features.advancedBI) features.push('Dashboard avancado (BI)');
+    if (plan.features.retentionReports) features.push('Relatorios de retencao e produtividade');
     
     return features;
   };
 
   const getCta = (plan: Plan) => {
+    // Se usuario ja tem este plano
+    if (hasActiveSubscription && currentPlan?.id === plan.id) {
+      return 'Plano Atual';
+    }
+    
     if (plan.name === 'Elite') {
       return 'Falar com Vendas';
     }
-    if (plan.name === 'Professional' && plan.trialDays > 0) {
-      return 'Começar Teste Grátis';
+    if (plan.trialDays > 0 && !hasActiveSubscription) {
+      return 'Comecar Teste Gratis';
     }
-    return 'Começar Agora';
+    if (hasActiveSubscription) {
+      return 'Alterar Plano';
+    }
+    return 'Comecar Agora';
+  };
+
+  const isCurrentPlan = (plan: Plan) => {
+    return hasActiveSubscription && currentPlan?.id === plan.id;
   };
 
   if (isLoading) {
@@ -202,7 +246,6 @@ export default function PricingPage() {
     const priceB = typeof b.price === 'string' ? parseFloat(b.price) : b.price;
     return priceA - priceB;
   });
-  const professionalPlan = sortedPlans.find(p => p.name === 'Professional');
 
   return (
     <div className="min-h-screen bg-background py-12 lg:py-20">
@@ -210,17 +253,44 @@ export default function PricingPage() {
         {/* Header */}
         <div className="mx-auto max-w-2xl text-center">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            Escolha o plano ideal para seu negócio
+            Escolha o plano ideal para seu negocio
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
             Comece a organizar sua agenda hoje mesmo. Sem taxas escondidas, cancele quando quiser.
           </p>
         </div>
 
+        {/* Current subscription alert */}
+        {user && hasActiveSubscription && (
+          <Alert className="mx-auto mt-8 max-w-2xl border-primary/30 bg-primary/5">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <AlertTitle>Voce ja possui uma assinatura ativa</AlertTitle>
+            <AlertDescription className="mt-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  Plano atual: <strong>{currentPlan?.name}</strong>
+                  {isTrialing && trialEndsAt && (
+                    <span className="ml-2 text-sm">
+                      (Teste gratis ate {new Date(trialEndsAt).toLocaleDateString('pt-BR')})
+                    </span>
+                  )}
+                </span>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/dashboard/assinatura">
+                    Gerenciar Assinatura
+                    <ExternalLink className="ml-2 h-3 w-3" />
+                  </Link>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Plans Grid */}
         <div className="mt-12 grid gap-8 lg:grid-cols-3">
           {sortedPlans.map((plan) => {
             const isProfessional = plan.name === 'Professional';
+            const isCurrent = isCurrentPlan(plan);
             const { reais, centavos } = formatPrice(plan.price);
             const features = getPlanFeaturesList(plan);
             const isSubscribing = subscribingPlanId === plan.id;
@@ -229,11 +299,12 @@ export default function PricingPage() {
               <Card
                 key={plan.id}
                 className={cn(
-                  'relative flex flex-col',
-                  isProfessional && 'border-primary shadow-xl shadow-primary/10 scale-105 z-10'
+                  'relative flex flex-col transition-all',
+                  isProfessional && 'border-primary shadow-xl shadow-primary/10 scale-105 z-10',
+                  isCurrent && 'ring-2 ring-primary'
                 )}
               >
-                {isProfessional && (
+                {isProfessional && !isCurrent && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                     <Badge className="bg-primary px-4 py-1 text-primary-foreground">
                       <Sparkles className="mr-1 h-3 w-3" />
@@ -242,7 +313,16 @@ export default function PricingPage() {
                   </div>
                 )}
 
-                <CardHeader className={cn(isProfessional && 'pt-8')}>
+                {isCurrent && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-green-600 px-4 py-1 text-white">
+                      <CheckCircle2 className="mr-1 h-3 w-3" />
+                      Seu Plano Atual
+                    </Badge>
+                  </div>
+                )}
+
+                <CardHeader className={cn((isProfessional || isCurrent) && 'pt-8')}>
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
                   <CardDescription className="min-h-[40px]">
                     {plan.description}
@@ -254,10 +334,10 @@ export default function PricingPage() {
                   <div className="mb-6">
                     <span className="text-4xl font-bold text-foreground">R$ {reais}</span>
                     <span className="text-xl text-foreground">,{centavos}</span>
-                    <span className="text-muted-foreground">/mês</span>
-                    {plan.trialDays > 0 && (
+                    <span className="text-muted-foreground">/mes</span>
+                    {plan.trialDays > 0 && !hasActiveSubscription && (
                       <p className="mt-1 text-sm text-primary">
-                        {plan.trialDays} dias grátis para testar
+                        {plan.trialDays} dias gratis para testar
                       </p>
                     )}
                   </div>
@@ -275,10 +355,10 @@ export default function PricingPage() {
                   {/* CTA */}
                   <Button
                     className="w-full"
-                    variant={isProfessional ? 'default' : 'outline'}
+                    variant={isCurrent ? 'secondary' : (isProfessional ? 'default' : 'outline')}
                     size="lg"
                     onClick={() => handleSubscribe(plan)}
-                    disabled={isSubscribing}
+                    disabled={isSubscribing || isCurrent}
                   >
                     {isSubscribing ? (
                       <>
@@ -302,9 +382,9 @@ export default function PricingPage() {
           </p>
           {!user && (
             <p className="mt-2 text-sm text-muted-foreground">
-              Já tem uma conta?{' '}
+              Ja tem uma conta?{' '}
               <a href="/login" className="text-primary hover:underline">
-                Faça login
+                Faca login
               </a>
             </p>
           )}

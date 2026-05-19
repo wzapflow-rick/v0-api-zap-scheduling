@@ -10,6 +10,7 @@ import { Loader2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AutoMessagesProvider } from '@/contexts/auto-messages-context';
+import { SubscriptionGuard } from '@/components/subscription-guard';
 
 export default function DashboardLayout({
   children,
@@ -57,7 +58,11 @@ export default function DashboardLayout({
         <div className="lg:pl-64 transition-all duration-300">
           <OfflineBanner />
           <DashboardHeader onMenuClick={() => setMobileOpen(true)} />
-          <main className="p-4 lg:p-6">{children}</main>
+          <main className="p-4 lg:p-6">
+            <SubscriptionGuard>
+              {children}
+            </SubscriptionGuard>
+          </main>
         </div>
       </div>
     </AutoMessagesProvider>
