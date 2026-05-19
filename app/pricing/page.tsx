@@ -95,15 +95,32 @@ const FALLBACK_PLANS: Plan[] = [
   },
 ];
 
-const plansFetcher = async () => {
+const FALLBACK_PLAN_IDS = ['essencial', 'professional', 'elite'];
+
+const plansFetcher = async (): Promise<{ plans: Plan[]; isFromApi: boolean }> => {
   const res = await subscriptionsApi.getPlans();
-  console.log('[v0] Plans API response:', res);
-  if (!res.success || !res.data || res.data.length === 0) {
-    console.log('[v0] Using fallback plans');
-    return FALLBACK_PLANS;
+  
+  // Check if we have valid data
+  if (res.success && res.data && Array.isArray(res.data) && res.data.length > 0) {
+    // Validate that plans have required fields
+    const validPlans = res.data.filter(plan => 
+      plan && plan.id && plan.name && typeof plan.price !== 'undefined'
+    );
+    
+    if (validPlans.length > 0) {
+      return { plans: validPlans, isFromApi: true };
+    }
   }
-  console.log('[v0] Using API plans:', res.data);
-  return res.data;
+  
+  // If the response has data but in different format, try to extract it
+  if (res.success && res.data && !Array.isArray(res.data)) {
+    const possiblePlans = (res.data as any).plans || (res.data as any).items || Object.values(res.data);
+    if (Array.isArray(possiblePlans) && possiblePlans.length > 0) {
+      return { plans: possiblePlans, isFromApi: true };
+    }
+  }
+  
+  return { plans: FALLBACK_PLANS, isFromApi: false };
 };
 
 export default function PricingPage() {
@@ -112,10 +129,14 @@ export default function PricingPage() {
   const { hasActiveSubscription, plan: currentPlan, subscription, isTrialing, trialEndsAt } = useSubscription();
   const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(null);
   
-  const { data: plans, isLoading } = useSWR<Plan[]>('plans', plansFetcher, {
+  const { data, isLoading } = useSWR<{ plans: Plan[]; isFromApi: boolean }>('plans', plansFetcher, {
     revalidateOnFocus: false,
-    fallbackData: FALLBACK_PLANS,
+    fallbackData: { plans: FALLBACK_PLANS, isFromApi: false },
   });
+
+  const plans = data?.plans || FALLBACK_PLANS;
+  const isFromApi = data?.isFromApi || false;
+  const isFallback = !isFromApi || FALLBACK_PLAN_IDS.includes(plans[0]?.id);
 
   const handleSubscribe = async (plan: Plan) => {
     // Se nao esta logado, redireciona para registro
@@ -149,20 +170,12 @@ export default function PricingPage() {
 
     setSubscribingPlanId(plan.id);
     try {
-      console.log('[v0] Creating subscription for plan:', { planId: plan.id, planName: plan.name });
-      
       const result = await subscriptionsApi.create(plan.id);
       
-      console.log('[v0] Subscription API response:', result);
-      
       if (result.success && result.data) {
-        // Redireciona para checkout do Mercado Pago
-        console.log('[v0] Redirecting to Mercado Pago:', result.data.initPoint);
         window.location.href = result.data.initPoint;
       } else {
-        // Trata erros especificos
         const errorMessage = result.error || 'Erro ao iniciar pagamento';
-        console.log('[v0] Subscription error:', errorMessage);
         
         if (errorMessage.toLowerCase().includes('ja possui') || 
             errorMessage.toLowerCase().includes('already') ||
@@ -175,13 +188,12 @@ export default function PricingPage() {
         } else if (errorMessage.toLowerCase().includes('invalid') || 
                    errorMessage.toLowerCase().includes('invalido') ||
                    errorMessage.toLowerCase().includes('dados')) {
-          toast.error('Dados invalidos. Verifique se voce completou seu cadastro.');
+          toast.error('Plano temporariamente indisponivel. Entre em contato pelo WhatsApp.');
         } else {
           toast.error(errorMessage);
         }
       }
-    } catch (error) {
-      console.error('[v0] Error subscribing:', error);
+    } catch {
       toast.error('Erro ao conectar com o servidor. Tente novamente.');
     } finally {
       setSubscribingPlanId(null);
@@ -279,6 +291,32 @@ export default function PricingPage() {
             Comece a organizar sua agenda hoje mesmo. Sem taxas escondidas, cancele quando quiser.
           </p>
         </div>
+
+        {/* API Warning for development */}
+        {isFallback && user && (
+          <Alert className="mx-auto mt-8 max-w-2xl border-amber-500/30 bg-amber-500/5">
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <AlertTitle className="text-amber-500">Sistema de pagamento em manutencao</AlertTitle>
+            <AlertDescription className="mt-2 text-amber-500/80">
+              O sistema de assinaturas esta temporariamente indisponivel. 
+              Por favor, entre em contato via WhatsApp para assinar um plano.
+              <div className="mt-3">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+                  onClick={() => {
+                    const message = encodeURIComponent('Ola! Gostaria de assinar um plano do ZapAgenda.');
+                    window.open(`https://wa.me/5511999999999?text=${message}`, '_blank');
+                  }}
+                >
+                  Falar com Suporte
+                  <ExternalLink className="ml-2 h-3 w-3" />
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Current subscription alert */}
         {user && hasActiveSubscription && (
@@ -378,13 +416,15 @@ export default function PricingPage() {
                     variant={isCurrent ? 'secondary' : (isProfessional ? 'default' : 'outline')}
                     size="lg"
                     onClick={() => handleSubscribe(plan)}
-                    disabled={isSubscribing || isCurrent}
+                    disabled={isSubscribing || isCurrent || (isFallback && plan.name !== 'Elite')}
                   >
                     {isSubscribing ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Processando...
                       </>
+                    ) : isFallback && plan.name !== 'Elite' ? (
+                      'Indisponivel'
                     ) : (
                       getCta(plan)
                     )}
