@@ -97,9 +97,12 @@ const FALLBACK_PLANS: Plan[] = [
 
 const plansFetcher = async () => {
   const res = await subscriptionsApi.getPlans();
+  console.log('[v0] Plans API response:', res);
   if (!res.success || !res.data || res.data.length === 0) {
+    console.log('[v0] Using fallback plans');
     return FALLBACK_PLANS;
   }
+  console.log('[v0] Using API plans:', res.data);
   return res.data;
 };
 
@@ -128,6 +131,13 @@ export default function PricingPage() {
       return;
     }
 
+    // Se ja tem assinatura ativa de outro plano
+    if (hasActiveSubscription && currentPlan?.id !== plan.id) {
+      toast.info('Para trocar de plano, acesse a pagina de assinatura');
+      router.push('/dashboard/assinatura');
+      return;
+    }
+
     // Se e o plano Elite, abre WhatsApp para vendas
     if (plan.name === 'Elite') {
       const message = encodeURIComponent(
@@ -139,23 +149,33 @@ export default function PricingPage() {
 
     setSubscribingPlanId(plan.id);
     try {
+      console.log('[v0] Creating subscription for plan:', { planId: plan.id, planName: plan.name });
+      
       const result = await subscriptionsApi.create(plan.id);
+      
+      console.log('[v0] Subscription API response:', result);
       
       if (result.success && result.data) {
         // Redireciona para checkout do Mercado Pago
+        console.log('[v0] Redirecting to Mercado Pago:', result.data.initPoint);
         window.location.href = result.data.initPoint;
       } else {
         // Trata erros especificos
         const errorMessage = result.error || 'Erro ao iniciar pagamento';
+        console.log('[v0] Subscription error:', errorMessage);
         
         if (errorMessage.toLowerCase().includes('ja possui') || 
             errorMessage.toLowerCase().includes('already') ||
             errorMessage.toLowerCase().includes('existing')) {
           toast.error('Voce ja possui uma assinatura. Acesse sua conta para gerenciar.');
           router.push('/dashboard/assinatura');
+        } else if (errorMessage.toLowerCase().includes('plano nao encontrado') ||
+                   errorMessage.toLowerCase().includes('plan not found')) {
+          toast.error('Plano nao disponivel. Por favor, recarregue a pagina.');
         } else if (errorMessage.toLowerCase().includes('invalid') || 
-                   errorMessage.toLowerCase().includes('invalido')) {
-          toast.error('Erro de configuracao. Por favor, tente novamente ou entre em contato.');
+                   errorMessage.toLowerCase().includes('invalido') ||
+                   errorMessage.toLowerCase().includes('dados')) {
+          toast.error('Dados invalidos. Verifique se voce completou seu cadastro.');
         } else {
           toast.error(errorMessage);
         }
