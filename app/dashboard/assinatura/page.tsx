@@ -122,6 +122,21 @@ export default function AssinaturaPage() {
     );
   };
 
+  // Debug log
+  console.log('[v0] AssinaturaPage state:', { 
+    isLoadingSubscription, 
+    hasActiveSubscription, 
+    plan, 
+    subscription,
+    isTrialing,
+    trialEndsAt,
+    trialDaysRemaining,
+    isLoadingUsage,
+    usage,
+    limits,
+    percentUsed
+  });
+
   // Loading state - only wait for subscription, not usage
   if (isLoadingSubscription) {
     return (
