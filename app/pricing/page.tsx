@@ -1,17 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import useSWR from 'swr';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Check, Loader2, Sparkles, AlertCircle, CheckCircle2, ExternalLink, Calendar, Gift } from 'lucide-react';
+import { Check, Loader2, Sparkles, AlertCircle, CheckCircle2, ExternalLink, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { subscriptionsApi } from '@/lib/api';
 import { toast } from 'sonner';
-import type { Plan, TrialEligibility } from '@/types';
+import type { Plan } from '@/types';
 import { useAuth } from '@/lib/auth-context';
 import { useSubscription, useTrialEligibility } from '@/hooks/use-subscription';
 import Link from 'next/link';
@@ -120,9 +120,23 @@ const plansFetcher = async (): Promise<{ plans: Plan[]; isFromApi: boolean }> =>
   return { plans: FALLBACK_PLANS, isFromApi: false };
 };
 
-export default function PricingPage() {
+// Component to handle search params (must be wrapped in Suspense)
+function TrialStartedHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    if (searchParams.get('trial') === 'started') {
+      toast.success('Seu periodo de teste foi iniciado com sucesso!');
+      router.replace('/pricing');
+    }
+  }, [searchParams, router]);
+  
+  return null;
+}
+
+function PricingContent() {
+  const router = useRouter();
   const { user } = useAuth();
   const { 
     hasActiveSubscription, 
@@ -153,14 +167,6 @@ export default function PricingPage() {
 
   // IDs dos planos disponiveis para trial
   const trialPlanIds = trialAvailablePlans.map(p => p.id);
-
-  // Verifica se o usuario acabou de iniciar o trial (vindo do redirect)
-  useEffect(() => {
-    if (searchParams.get('trial') === 'started') {
-      toast.success('Seu periodo de teste foi iniciado com sucesso!');
-      router.replace('/pricing');
-    }
-  }, [searchParams, router]);
 
   const handleStartTrial = async (plan: Plan) => {
     if (!user) {
@@ -559,5 +565,16 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <>
+      <Suspense fallback={null}>
+        <TrialStartedHandler />
+      </Suspense>
+      <PricingContent />
+    </>
   );
 }
