@@ -339,6 +339,19 @@ export const subscriptionsApi = {
     apiFetch<{ message: string }>('/subscriptions', {
       method: 'DELETE',
     }),
+  
+  // PATCH /api/subscriptions - Change plan
+  changePlan: (planId: string) =>
+    apiFetch<{
+      requiresPayment: boolean;
+      message?: string;
+      preferenceId?: string;
+      initPoint?: string;
+      sandboxInitPoint?: string;
+    }>('/subscriptions', {
+      method: 'PATCH',
+      body: JSON.stringify({ planId }),
+    }),
 };
 
 // Automatic Messages API - Uses backend routes at /api/automatic-messages

@@ -217,10 +217,30 @@ function PricingContent() {
       return;
     }
 
-    // Se ja tem assinatura ativa de outro plano (e nao esta em trial expirado)
+    // Se ja tem assinatura ativa de outro plano - usar endpoint de troca de plano
     if (hasActiveSubscription && !isTrialExpired && currentPlan?.id !== plan.id) {
-      toast.info('Para trocar de plano, acesse a pagina de assinatura');
-      router.push('/dashboard/assinatura');
+      setSubscribingPlanId(plan.id);
+      try {
+        const result = await subscriptionsApi.changePlan(plan.id);
+        
+        if (result.success && result.data) {
+          if (result.data.requiresPayment && result.data.initPoint) {
+            // Redireciona para Mercado Pago
+            window.location.href = result.data.initPoint;
+          } else {
+            // Plano alterado com sucesso (trial)
+            toast.success(result.data.message || 'Plano alterado com sucesso!');
+            router.push('/dashboard/assinatura');
+            router.refresh();
+          }
+        } else {
+          toast.error(result.error || 'Erro ao alterar plano');
+        }
+      } catch {
+        toast.error('Erro ao conectar com o servidor. Tente novamente.');
+      } finally {
+        setSubscribingPlanId(null);
+      }
       return;
     }
 
