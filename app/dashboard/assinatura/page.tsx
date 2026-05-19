@@ -75,9 +75,15 @@ export default function AssinaturaPage() {
   };
 
   const handleConvertToPaid = async () => {
+    if (!plan?.id) {
+      toast.error('Plano nao encontrado');
+      return;
+    }
+    
     setIsConverting(true);
     try {
-      const result = await subscriptionsApi.convertTrialToPaid();
+      // Use the create subscription endpoint with the current plan
+      const result = await subscriptionsApi.create(plan.id);
       if (result.success && result.data) {
         window.location.href = result.data.initPoint;
       } else {
@@ -189,31 +195,6 @@ export default function AssinaturaPage() {
         <p className="text-muted-foreground">Gerencie seu plano e assinatura</p>
       </div>
 
-      {/* Trial Alert */}
-      {isTrialing && trialEndsAt && (
-        <Card className="border-primary/50 bg-primary/5">
-          <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center">
-            <Clock className="h-5 w-5 text-primary" />
-            <div className="flex-1">
-              <p className="font-medium">Periodo de Teste - {trialDaysRemaining} dias restantes</p>
-              <p className="text-sm text-muted-foreground">
-                Seu teste gratuito termina em {formatDate(trialEndsAt)}
-              </p>
-            </div>
-            <Button size="sm" onClick={handleConvertToPaid} disabled={isConverting}>
-              {isConverting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processando...
-                </>
-              ) : (
-                'Assinar Agora'
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Current Plan */}
       <Card>
         <CardHeader>
@@ -238,9 +219,23 @@ export default function AssinaturaPage() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" asChild>
-              <Link href="/pricing">Alterar Plano</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              {isTrialing && (
+                <Button onClick={handleConvertToPaid} disabled={isConverting}>
+                  {isConverting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    'Assinar Agora'
+                  )}
+                </Button>
+              )}
+              <Button variant="outline" asChild>
+                <Link href="/pricing">Alterar Plano</Link>
+              </Button>
+            </div>
           </div>
 
           <Separator />
@@ -258,9 +253,13 @@ export default function AssinaturaPage() {
             <div className="flex items-center gap-3">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Próxima cobrança</p>
+                <p className="text-sm text-muted-foreground">
+                  {isTrialing ? 'Fim do teste gratuito' : 'Proxima cobranca'}
+                </p>
                 <p className="font-medium">
-                  {subscription?.endDate ? formatDate(subscription.endDate) : '-'}
+                  {isTrialing && trialEndsAt 
+                    ? formatDate(trialEndsAt) 
+                    : (subscription?.endDate ? formatDate(subscription.endDate) : '-')}
                 </p>
               </div>
             </div>
