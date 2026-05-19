@@ -85,7 +85,21 @@ async function handleProxy(
       body: body || undefined,
     });
 
-    const data = await response.json();
+    // Handle empty responses or non-JSON responses
+    const responseText = await response.text();
+    let data;
+    
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        // If response is not valid JSON, wrap it
+        data = { success: response.ok, message: responseText };
+      }
+    } else {
+      // Empty response - create a default response
+      data = { success: response.ok, message: response.ok ? 'Operacao realizada com sucesso' : 'Erro na operacao' };
+    }
 
     return NextResponse.json(data, {
       status: response.status,
