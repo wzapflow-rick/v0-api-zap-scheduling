@@ -4,117 +4,126 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ZapAgenda Theme - Clean, Professional, Warm */
-  --background: oklch(0.985 0.002 90);
-  --foreground: oklch(0.145 0.02 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.02 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.02 250);
+  /* ZapFlow Light Theme */
+  --background: #F5F7FA;
+  --foreground: #0A0F14;
+  --card: #FFFFFF;
+  --card-foreground: #0A0F14;
+  --popover: #FFFFFF;
+  --popover-foreground: #0A0F14;
   
-  /* Primary - Teal/Emerald for trust and professionalism */
-  --primary: oklch(0.55 0.15 170);
-  --primary-foreground: oklch(0.99 0 0);
+  /* Primary - Verde Flow */
+  --primary: #22D15A;
+  --primary-foreground: #0A0F14;
   
-  /* Secondary - Warm neutral */
-  --secondary: oklch(0.96 0.01 90);
-  --secondary-foreground: oklch(0.25 0.02 250);
+  /* Secondary */
+  --secondary: #E8EAED;
+  --secondary-foreground: #0A0F14;
   
-  /* Muted - Soft gray */
-  --muted: oklch(0.96 0.005 250);
-  --muted-foreground: oklch(0.45 0.015 250);
+  /* Muted */
+  --muted: #E8EAED;
+  --muted-foreground: #A1A7B3;
   
-  /* Accent - Light teal */
-  --accent: oklch(0.94 0.04 170);
-  --accent-foreground: oklch(0.25 0.1 170);
+  /* Accent */
+  --accent: #E8F5EC;
+  --accent-foreground: #22D15A;
   
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.98 0 0);
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
   
-  --border: oklch(0.91 0.01 250);
-  --input: oklch(0.91 0.01 250);
-  --ring: oklch(0.55 0.15 170);
+  --border: #E2E4E8;
+  --input: #E2E4E8;
+  --ring: #22D15A;
   
   /* Charts */
-  --chart-1: oklch(0.55 0.15 170);
-  --chart-2: oklch(0.65 0.12 220);
-  --chart-3: oklch(0.7 0.15 280);
-  --chart-4: oklch(0.75 0.12 50);
-  --chart-5: oklch(0.6 0.18 30);
+  --chart-1: #22D15A;
+  --chart-2: #7CFF6B;
+  --chart-3: #0B1010;
+  --chart-4: #A1A7B3;
+  --chart-5: #F59E0B;
   
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   
   /* Sidebar */
-  --sidebar: oklch(0.99 0.002 90);
-  --sidebar-foreground: oklch(0.145 0.02 250);
-  --sidebar-primary: oklch(0.55 0.15 170);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.94 0.04 170);
-  --sidebar-accent-foreground: oklch(0.25 0.1 170);
-  --sidebar-border: oklch(0.91 0.01 250);
-  --sidebar-ring: oklch(0.55 0.15 170);
+  --sidebar: #F5F7FA;
+  --sidebar-foreground: #0A0F14;
+  --sidebar-primary: #22D15A;
+  --sidebar-primary-foreground: #0A0F14;
+  --sidebar-accent: #E8F5EC;
+  --sidebar-accent-foreground: #22D15A;
+  --sidebar-border: #E2E4E8;
+  --sidebar-ring: #22D15A;
   
   /* Success */
-  --success: oklch(0.6 0.15 145);
-  --success-foreground: oklch(0.99 0 0);
+  --success: #22D15A;
+  --success-foreground: #0A0F14;
   
   /* Warning */
-  --warning: oklch(0.75 0.15 70);
-  --warning-foreground: oklch(0.25 0.05 70);
+  --warning: #F59E0B;
+  --warning-foreground: #0A0F14;
 }
 
 .dark {
-  --background: oklch(0.13 0.015 250);
-  --foreground: oklch(0.96 0.005 90);
-  --card: oklch(0.17 0.015 250);
-  --card-foreground: oklch(0.96 0.005 90);
-  --popover: oklch(0.17 0.015 250);
-  --popover-foreground: oklch(0.96 0.005 90);
+  /* ZapFlow Dark Theme - Based on brand guide */
+  --background: #0A0F14;
+  --foreground: #F5F7FA;
+  --card: #0B1010;
+  --card-foreground: #F5F7FA;
+  --popover: #0B1010;
+  --popover-foreground: #F5F7FA;
   
-  --primary: oklch(0.65 0.15 170);
-  --primary-foreground: oklch(0.13 0.015 250);
+  /* Primary - Verde Flow */
+  --primary: #22D15A;
+  --primary-foreground: #0A0F14;
   
-  --secondary: oklch(0.22 0.015 250);
-  --secondary-foreground: oklch(0.96 0.005 90);
+  /* Secondary */
+  --secondary: #1A1F24;
+  --secondary-foreground: #F5F7FA;
   
-  --muted: oklch(0.22 0.01 250);
-  --muted-foreground: oklch(0.65 0.01 250);
+  /* Muted */
+  --muted: #1A1F24;
+  --muted-foreground: #A1A7B3;
   
-  --accent: oklch(0.25 0.05 170);
-  --accent-foreground: oklch(0.85 0.1 170);
+  /* Accent */
+  --accent: rgba(34, 209, 90, 0.1);
+  --accent-foreground: #7CFF6B;
   
-  --destructive: oklch(0.45 0.18 25);
-  --destructive-foreground: oklch(0.96 0.005 90);
+  --destructive: #DC2626;
+  --destructive-foreground: #F5F7FA;
   
-  --border: oklch(0.25 0.01 250);
-  --input: oklch(0.25 0.01 250);
-  --ring: oklch(0.65 0.15 170);
+  --border: #1F2428;
+  --input: #1F2428;
+  --ring: #22D15A;
   
-  --chart-1: oklch(0.65 0.15 170);
-  --chart-2: oklch(0.55 0.15 220);
-  --chart-3: oklch(0.6 0.15 280);
-  --chart-4: oklch(0.7 0.12 50);
-  --chart-5: oklch(0.55 0.18 30);
+  /* Charts */
+  --chart-1: #22D15A;
+  --chart-2: #7CFF6B;
+  --chart-3: #A1A7B3;
+  --chart-4: #F59E0B;
+  --chart-5: #EF4444;
   
-  --sidebar: oklch(0.15 0.015 250);
-  --sidebar-foreground: oklch(0.96 0.005 90);
-  --sidebar-primary: oklch(0.65 0.15 170);
-  --sidebar-primary-foreground: oklch(0.13 0.015 250);
-  --sidebar-accent: oklch(0.25 0.05 170);
-  --sidebar-accent-foreground: oklch(0.85 0.1 170);
-  --sidebar-border: oklch(0.25 0.01 250);
-  --sidebar-ring: oklch(0.65 0.15 170);
+  /* Sidebar */
+  --sidebar: #0B1010;
+  --sidebar-foreground: #F5F7FA;
+  --sidebar-primary: #22D15A;
+  --sidebar-primary-foreground: #0A0F14;
+  --sidebar-accent: rgba(34, 209, 90, 0.15);
+  --sidebar-accent-foreground: #7CFF6B;
+  --sidebar-border: #1F2428;
+  --sidebar-ring: #22D15A;
   
-  --success: oklch(0.55 0.15 145);
-  --success-foreground: oklch(0.96 0.005 90);
+  /* Success */
+  --success: #22D15A;
+  --success-foreground: #0A0F14;
   
-  --warning: oklch(0.7 0.15 70);
-  --warning-foreground: oklch(0.2 0.05 70);
+  /* Warning */
+  --warning: #F59E0B;
+  --warning-foreground: #0A0F14;
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback', system-ui, sans-serif;
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
+  --font-sans: 'Satoshi', 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -166,10 +175,10 @@
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - ZapFlow style */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -177,10 +186,17 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.7 0 0 / 0.3);
-  border-radius: 4px;
+  background: rgba(161, 167, 179, 0.3);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.6 0 0 / 0.4);
+  background: rgba(161, 167, 179, 0.5);
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }

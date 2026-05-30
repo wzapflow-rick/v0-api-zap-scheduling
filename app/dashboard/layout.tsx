@@ -6,11 +6,46 @@ import { useAuth } from '@/lib/auth-context';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { DashboardHeader } from '@/components/dashboard/header';
 import { OfflineBanner } from '@/components/connection-status';
-import { Loader2, Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Loader2 } from 'lucide-react';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { AutoMessagesProvider } from '@/contexts/auto-messages-context';
 import { SubscriptionGuard } from '@/components/subscription-guard';
+import { SidebarProvider, useSidebar } from '@/contexts/sidebar-context';
+import { cn } from '@/lib/utils';
+
+function DashboardContent({ children }: { children: React.ReactNode }) {
+  const { collapsed } = useSidebar();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+      
+      {/* Mobile Sidebar */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-[240px] p-0 bg-sidebar border-sidebar-border">
+          <Sidebar onLinkClick={() => setMobileOpen(false)} />
+        </SheetContent>
+      </Sheet>
+      
+      <div className={cn(
+        'transition-all duration-300 ease-in-out',
+        collapsed ? 'lg:pl-[72px]' : 'lg:pl-[240px]'
+      )}>
+        <OfflineBanner />
+        <DashboardHeader onMenuClick={() => setMobileOpen(true)} />
+        <main className="p-4 lg:p-6">
+          <SubscriptionGuard>
+            {children}
+          </SubscriptionGuard>
+        </main>
+      </div>
+    </>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -19,7 +54,6 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const slug = user?.establishment?.slug;
 
   useEffect(() => {
@@ -30,7 +64,7 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -41,30 +75,12 @@ export default function DashboardLayout({
   }
 
   return (
-    <AutoMessagesProvider slug={slug}>
-      <div className="min-h-screen bg-background">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:block">
-          <Sidebar />
+    <SidebarProvider>
+      <AutoMessagesProvider slug={slug}>
+        <div className="min-h-screen bg-background">
+          <DashboardContent>{children}</DashboardContent>
         </div>
-        
-        {/* Mobile Sidebar */}
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="w-64 p-0">
-            <Sidebar onLinkClick={() => setMobileOpen(false)} />
-          </SheetContent>
-        </Sheet>
-        
-        <div className="lg:pl-64 transition-all duration-300">
-          <OfflineBanner />
-          <DashboardHeader onMenuClick={() => setMobileOpen(true)} />
-          <main className="p-4 lg:p-6">
-            <SubscriptionGuard>
-              {children}
-            </SubscriptionGuard>
-          </main>
-        </div>
-      </div>
-    </AutoMessagesProvider>
+      </AutoMessagesProvider>
+    </SidebarProvider>
   );
 }
