@@ -11,12 +11,14 @@ import {
   Scissors,
   ChevronLeft,
   CreditCard,
-  LayoutGrid,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/contexts/sidebar-context';
+import { motion, AnimatePresence } from 'motion/react';
+import Image from 'next/image';
 
-const sidebarLinks = [
+const navItems = [
   {
     href: '/dashboard',
     label: 'Dashboard',
@@ -43,6 +45,9 @@ const sidebarLinks = [
     label: 'Servicos',
     icon: Scissors,
   },
+];
+
+const adminItems = [
   {
     href: '/dashboard/assinatura',
     label: 'Assinatura',
@@ -55,6 +60,87 @@ const sidebarLinks = [
   },
 ];
 
+// Componente de item do menu com animacoes
+function NavItem({ 
+  item, 
+  isActive, 
+  isOpen, 
+  onClick,
+  index 
+}: { 
+  item: typeof navItems[0]; 
+  isActive: boolean; 
+  isOpen: boolean; 
+  onClick?: () => void;
+  index: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.03, duration: 0.3 }}
+    >
+      <Link
+        href={item.href}
+        onClick={onClick}
+        className={cn(
+          "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300",
+          isActive
+            ? "bg-gradient-to-r from-primary/20 to-primary/5 text-primary"
+            : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+        )}
+      >
+        {/* Barra indicadora lateral animada */}
+        <AnimatePresence>
+          {isActive && (
+            <motion.div
+              layoutId="activeIndicator"
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              exit={{ opacity: 0, scaleY: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-full"
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Icone com efeito de glow quando ativo */}
+        <div className={cn(
+          "relative flex items-center justify-center size-9 rounded-lg transition-all duration-300 shrink-0",
+          isActive 
+            ? "bg-primary/20 shadow-[0_0_20px_rgba(34,197,94,0.3)]" 
+            : "bg-white/5 group-hover:bg-white/10"
+        )}>
+          <item.icon className={cn(
+            "size-[18px] transition-all duration-300",
+            isActive ? "text-primary" : "text-slate-400 group-hover:text-slate-200"
+          )} />
+        </div>
+
+        {/* Nome do item com animacao */}
+        {isOpen && (
+          <motion.span 
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+            exit={{ opacity: 0, width: 0 }}
+            className={cn(
+              "text-sm font-medium whitespace-nowrap transition-colors duration-300",
+              isActive ? "text-primary font-semibold" : "text-slate-300 group-hover:text-white"
+            )}
+          >
+            {item.label}
+          </motion.span>
+        )}
+
+        {/* Seta indicadora no hover */}
+        {isOpen && !isActive && (
+          <ChevronRight className="size-4 text-slate-500 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 ml-auto" />
+        )}
+      </Link>
+    </motion.div>
+  );
+}
+
 interface SidebarProps {
   onLinkClick?: () => void;
 }
@@ -62,81 +148,128 @@ interface SidebarProps {
 export function Sidebar({ onLinkClick }: SidebarProps) {
   const pathname = usePathname();
   const { collapsed, toggleCollapsed } = useSidebar();
+  const isOpen = !collapsed;
 
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 flex h-screen flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out',
-        collapsed ? 'w-[72px]' : 'w-[240px]'
+        "fixed left-0 top-0 h-full transition-all duration-300 z-40 flex flex-col",
+        "bg-gradient-to-b from-[#0c1929] via-[#0a1525] to-[#081220]",
+        "border-r border-white/5",
+        "shadow-[4px_0_24px_rgba(0,0,0,0.3)]",
+        isOpen ? "w-64" : "w-20"
       )}
     >
-      {/* Logo */}
-      <div className="flex h-16 items-center px-4">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary">
-            <Calendar className="h-5 w-5 text-primary-foreground" />
-          </div>
-          {!collapsed && (
-            <span className="text-lg font-bold text-sidebar-foreground whitespace-nowrap">
-              ZapAgenda
-            </span>
-          )}
-        </Link>
-      </div>
-
-      {/* Collapse Toggle */}
-      <div className="px-4 pb-2">
-        <button
-          onClick={toggleCollapsed}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-          title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+      {/* Header - Logo */}
+      <div className="p-4 flex items-center justify-center">
+        <motion.div 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="relative"
         >
-          <LayoutGrid className="h-5 w-5" />
-        </button>
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <div className="relative size-10 rounded-xl overflow-hidden shrink-0 shadow-lg ring-2 ring-primary/20 bg-primary/10 flex items-center justify-center">
+              <Calendar className="size-5 text-primary" />
+            </div>
+            
+            {isOpen && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex flex-col"
+              >
+                <h1 className="font-bold text-white leading-none text-lg">
+                  ZapAgenda
+                </h1>
+                <p className="text-[9px] text-primary/80 mt-1 uppercase tracking-widest font-bold flex items-center gap-1">
+                  <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+                  by ZapFlow
+                </p>
+              </motion.div>
+            )}
+          </Link>
+        </motion.div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 overflow-y-auto">
-        {sidebarLinks.map((link) => {
-          const isActive = link.exact 
-            ? pathname === link.href 
-            : pathname === link.href || pathname.startsWith(link.href + '/');
+      {/* Navegacao */}
+      <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto custom-scrollbar">
+        {navItems.map((item, index) => {
+          const isActive = item.exact 
+            ? pathname === item.href 
+            : pathname === item.href || pathname.startsWith(item.href + '/');
           
           return (
-            <Link
-              key={link.href}
-              href={link.href}
+            <NavItem
+              key={item.href}
+              item={item}
+              isActive={isActive}
+              isOpen={isOpen}
               onClick={onLinkClick}
-              className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-              )}
-              title={collapsed ? link.label : undefined}
-            >
-              <link.icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span className="whitespace-nowrap">{link.label}</span>}
-            </Link>
+              index={index}
+            />
           );
         })}
+
+        {/* Secao Administracao */}
+        <div className="pt-3 mt-3">
+          <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-3" />
+          
+          {isOpen && (
+            <motion.span 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 block"
+            >
+              Administracao
+            </motion.span>
+          )}
+          
+          <div className="space-y-1">
+            {adminItems.map((item, index) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+              
+              return (
+                <NavItem
+                  key={item.href}
+                  item={item}
+                  isActive={isActive}
+                  isOpen={isOpen}
+                  onClick={onLinkClick}
+                  index={navItems.length + index}
+                />
+              );
+            })}
+          </div>
+        </div>
       </nav>
 
-      {/* Collapse Button */}
-      <div className="p-3 border-t border-sidebar-border">
-        <button
+      {/* Footer - Collapse Button */}
+      <div className="p-3 border-t border-white/5">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
           onClick={toggleCollapsed}
           className={cn(
-            'flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200',
-            collapsed && 'justify-center'
+            "group relative flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-300",
+            "text-slate-400 hover:text-slate-200 hover:bg-white/5"
           )}
         >
-          <ChevronLeft className={cn(
-            'h-5 w-5 shrink-0 transition-transform duration-300',
-            collapsed && 'rotate-180'
-          )} />
-          {!collapsed && <span>Recolher</span>}
-        </button>
+          <div className="relative flex items-center justify-center size-9 rounded-lg bg-white/5 group-hover:bg-white/10 transition-all duration-300 shrink-0">
+            <ChevronLeft className={cn(
+              "size-[18px] text-slate-400 group-hover:text-slate-200 transition-all duration-300",
+              collapsed && "rotate-180"
+            )} />
+          </div>
+          
+          {isOpen && (
+            <motion.span 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-sm font-medium text-slate-300 group-hover:text-white whitespace-nowrap"
+            >
+              Recolher
+            </motion.span>
+          )}
+        </motion.button>
       </div>
     </aside>
   );
