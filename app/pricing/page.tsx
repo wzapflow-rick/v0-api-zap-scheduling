@@ -177,8 +177,10 @@ function PricingContent() {
     try {
       const result = await subscriptionsApi.startTrial(plan.id);
       
-      if (result.success && result.data) {
-        toast.success(`Seu teste gratis de ${result.data.trialDays} dias foi iniciado!`);
+      // Se a resposta veio com success: true (mesmo sem data), considere sucesso
+      if (result.success) {
+        const trialDays = result.data?.trialDays || plan.trialDays || 7;
+        toast.success(`Seu teste gratis de ${trialDays} dias foi iniciado!`);
         await refreshSubscription();
         await refreshTrialEligibility();
         router.push('/dashboard?trial=started');
@@ -189,8 +191,9 @@ function PricingContent() {
             errorMessage.toLowerCase().includes('already used')) {
           toast.error('Voce ja utilizou seu periodo de teste gratuito.');
         } else if (errorMessage.toLowerCase().includes('ja possui') || 
-                   errorMessage.toLowerCase().includes('already has')) {
-          toast.error('Voce ja possui uma assinatura ativa.');
+                   errorMessage.toLowerCase().includes('already has') ||
+                   errorMessage.toLowerCase().includes('existing')) {
+          toast.info('Voce ja possui uma assinatura ativa!');
           router.push('/dashboard/assinatura');
         } else {
           toast.error(errorMessage);
