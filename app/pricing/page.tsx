@@ -166,8 +166,6 @@ function PricingContent() {
   const isFallback = !isFromApi || FALLBACK_PLAN_IDS.includes(plans[0]?.id);
 
   const handleStartTrial = async (plan: Plan) => {
-    console.log('[v0] handleStartTrial called with plan:', plan);
-    
     if (!user) {
       router.push(`/register?plan=${plan.name.toLowerCase()}`);
       return;
@@ -177,20 +175,15 @@ function PricingContent() {
     setSubscribingPlanId(plan.id);
     
     try {
-      console.log('[v0] Calling subscriptionsApi.startTrial with planId:', plan.id);
       const result = await subscriptionsApi.startTrial(plan.id);
-      console.log('[v0] startTrial result:', result);
       
-      // Se a resposta veio com success: true (mesmo sem data), considere sucesso
       if (result.success) {
-        console.log('[v0] Trial started successfully');
         const trialDays = result.data?.trialDays || plan.trialDays || 7;
         toast.success(`Seu teste gratis de ${trialDays} dias foi iniciado!`);
         await refreshSubscription();
         await refreshTrialEligibility();
         router.push('/dashboard?trial=started');
       } else {
-        console.log('[v0] Trial start failed:', result.error);
         const errorMessage = result.error || 'Erro ao iniciar teste gratis';
         
         if (errorMessage.toLowerCase().includes('ja utilizou') || 
@@ -205,8 +198,7 @@ function PricingContent() {
           toast.error(errorMessage);
         }
       }
-    } catch (error) {
-      console.log('[v0] Trial start exception:', error);
+    } catch {
       toast.error('Erro ao conectar com o servidor. Tente novamente.');
     } finally {
       setIsStartingTrial(false);

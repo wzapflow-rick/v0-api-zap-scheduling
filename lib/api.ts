@@ -41,40 +41,27 @@ async function apiFetch<T>(
   };
 
   try {
-    console.log('[v0] apiFetch request:', { url: `${API_BASE_URL}${endpoint}`, method: options.method || 'GET' });
-    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
     });
 
-    // Handle empty responses gracefully
     const text = await response.text();
     let data: any = {};
-    
-    console.log('[v0] apiFetch response:', { status: response.status, ok: response.ok, text: text.substring(0, 500) });
     
     if (text) {
       try {
         data = JSON.parse(text);
-        console.log('[v0] apiFetch parsed data:', data);
       } catch {
-        // If response is not JSON but request was successful, treat as success
-        console.log('[v0] apiFetch: Failed to parse JSON');
         if (response.ok) {
           return { success: true, data: null as unknown as T };
         }
         return { success: false, error: 'Resposta inválida do servidor' };
       }
-    } else {
-      console.log('[v0] apiFetch: Empty response');
     }
     
     if (!response.ok) {
-      // Trata caso onde backend retorna success:true mas com erro dentro de data
-      // Ex: {"success":true,"data":{"error":"Email ja esta em uso"}}
       const errorMessage = data.data?.error || data.error || 'Erro na requisição';
-      console.log('[v0] apiFetch error:', errorMessage);
       return {
         success: false,
         error: errorMessage,

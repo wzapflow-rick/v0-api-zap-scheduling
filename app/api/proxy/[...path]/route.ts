@@ -89,28 +89,15 @@ async function handleProxy(
     const responseText = await response.text();
     let data;
     
-    console.log('[v0] Proxy response:', {
-      url: targetUrl,
-      method: request.method,
-      status: response.status,
-      responseText: responseText.substring(0, 500),
-    });
-    
     if (responseText) {
       try {
         data = JSON.parse(responseText);
       } catch {
-        // If response is not valid JSON, wrap it
-        console.log('[v0] Proxy: Response is not valid JSON, wrapping');
         data = { success: response.ok, message: responseText };
       }
     } else {
-      // Empty response - create a default response
-      console.log('[v0] Proxy: Empty response, creating default');
       data = { success: response.ok, message: response.ok ? 'Operacao realizada com sucesso' : 'Erro na operacao' };
     }
-
-    console.log('[v0] Proxy final data:', data);
 
     return NextResponse.json(data, {
       status: response.status,
