@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/components/theme-provider';
 import { OfflineProvider } from '@/components/offline-provider';
+import { KeyboardNavigationDetector } from '@/components/keyboard-navigation-detector';
 import './globals.css';
 
 const geist = Geist({ 
@@ -61,6 +62,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background">
+        <KeyboardNavigationDetector />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
