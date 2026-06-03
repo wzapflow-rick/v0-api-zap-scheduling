@@ -1,35 +1,50 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getInstanceStatus, getInstanceInfo } from '@/lib/evolution-api';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { 
+  verifyAuth, 
+  unauthorizedResponse, 
+  rateLimitResponse, 
+  badRequestResponse,
+  internalErrorResponse,
+  validateSlug,
+} from '@/lib/api-auth';
 
 export async function GET(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: 'Não autorizado' },
-        { status: 401 }
-      );
+    // 1. Verify authentication
+    const auth = await verifyAuth();
+    if (!auth.authenticated) {
+      return unauthorizedResponse(auth.error);
     }
 
+    // 2. Get and validate slug
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get('slug');
 
     if (!slug) {
-      return NextResponse.json(
-        { success: false, error: 'Slug do estabelecimento é obrigatório' },
-        { status: 400 }
-      );
+      return badRequestResponse('Slug do estabelecimento é obrigatório');
+    }
+
+    if (!validateSlug(slug)) {
+      return badRequestResponse('Slug do estabelecimento inválido');
+    }
+
+    // 3. Rate limiting (using general limit for status checks)
+    const rateLimitKey = `status:${slug}`;
+    const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMITS.general);
+    
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetIn);
     }
 
     const instanceName = `ZapFlow-Agenda_${slug}`;
     
-    // Get connection state
+    // 4. Get connection state
     const statusResult = await getInstanceStatus(instanceName);
     
     if (!statusResult.success) {
+      // Instance doesn't exist or error - return disconnected state
       return NextResponse.json({
         success: true,
         data: {
@@ -39,6 +54,10 @@ export async function GET(request: Request) {
           profileName: null,
           profilePictureUrl: null,
         },
+      }, {
+        headers: {
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+        },
       });
     }
 
@@ -46,12 +65,18 @@ export async function GET(request: Request) {
     const instanceData = statusResult.data as { instance?: { state?: string } };
     const state = instanceData?.instance?.state || 'close';
 
-    // If connected, get profile info
+    // 5. If connected, get profile info
     let profileInfo = null;
     if (state === 'open') {
       const infoResult = await getInstanceInfo(instanceName);
       if (infoResult.success && infoResult.data) {
-        const infoData = infoResult.data as { instance?: { profileName?: string; profilePictureUrl?: string; owner?: string } };
+        const infoData = infoResult.data as { 
+          instance?: { 
+            profileName?: string; 
+            profilePictureUrl?: string; 
+            owner?: string;
+          };
+        };
         profileInfo = {
           profileName: infoData.instance?.profileName,
           profilePictureUrl: infoData.instance?.profilePictureUrl,
@@ -68,11 +93,13 @@ export async function GET(request: Request) {
         connected: state === 'open',
         ...profileInfo,
       },
+    }, {
+      headers: {
+        'X-RateLimit-Remaining': String(rateLimit.remaining),
+      },
     });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erro interno' },
-      { status: 500 }
-    );
+    console.error('[Status Error]', error);
+    return internalErrorResponse('Erro ao verificar status');
   }
 }
