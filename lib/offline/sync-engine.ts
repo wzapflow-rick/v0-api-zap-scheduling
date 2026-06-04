@@ -85,14 +85,26 @@ export async function checkBackendAvailability(): Promise<boolean> {
   }
 
   try {
-    // Just check local app health - if the app is running, we consider it available
-    // The actual API calls will handle their own errors
+    // O endpoint /api/health agora faz um ping real ao backend e retorna
+    // { status, backend, backendStatus }. Usamos o campo "backend" para
+    // saber se o servidor/banco esta de fato respondendo.
     const localResponse = await fetch('/api/health', {
       method: 'GET',
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(5000),
+      cache: 'no-store',
     });
-    
-    const isAvailable = localResponse.ok;
+
+    if (!localResponse.ok) {
+      updateSyncStatusState({ isBackendAvailable: false });
+      return false;
+    }
+
+    const health = await localResponse.json().catch(() => null);
+    // Compatibilidade: se a resposta nao tiver o campo "backend"
+    // (versao antiga), assumimos disponivel quando o app responde ok.
+    const isAvailable =
+      health && typeof health.backend === 'boolean' ? health.backend : true;
+
     updateSyncStatusState({ isBackendAvailable: isAvailable });
     return isAvailable;
   } catch {
