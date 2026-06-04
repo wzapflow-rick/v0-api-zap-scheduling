@@ -9,8 +9,16 @@ import {
   offlineServicesApi,
   getSyncQueueCount,
   getPendingCounts,
+  getSyncQueue,
+  retryFailedItem,
+  discardFailedItem,
+  retryAllFailed,
+  forceSync,
+  type SyncQueueItem,
 } from '@/lib/offline';
 import type { Appointment, Client, Professional, Service } from '@/types';
+
+const MAX_RETRY_ATTEMPTS = 5;
 
 // Generic hook for offline data
 function useOfflineData<T>(
@@ -143,6 +151,90 @@ export function useSyncStatus() {
   return {
     queueCount,
     pendingCounts,
+    refresh,
+  };
+}
+
+export interface SyncQueueEntry extends SyncQueueItem {
+  isFailed: boolean;
+}
+
+// Hook que expoe a fila de sincronizacao detalhada com acoes de
+// reprocessar/descartar para dar visibilidade ao usuario.
+export function useSyncQueue() {
+  const [items, setItems] = useState<SyncQueueEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    const queue = await getSyncQueue();
+    setItems(
+      queue
+        .map((item) => ({ ...item, isFailed: item.attempts >= MAX_RETRY_ATTEMPTS }))
+        .sort((a, b) => b.timestamp - a.timestamp)
+    );
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const interval = setInterval(refresh, 5000);
+    return () => clearInterval(interval);
+  }, [refresh]);
+
+  const retry = useCallback(async (id: string) => {
+    setIsProcessing(true);
+    try {
+      await retryFailedItem(id);
+      await refresh();
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [refresh]);
+
+  const discard = useCallback(async (id: string) => {
+    setIsProcessing(true);
+    try {
+      await discardFailedItem(id);
+      await refresh();
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [refresh]);
+
+  const retryAll = useCallback(async () => {
+    setIsProcessing(true);
+    try {
+      await retryAllFailed();
+      await refresh();
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [refresh]);
+
+  const syncNow = useCallback(async () => {
+    setIsProcessing(true);
+    try {
+      await forceSync();
+      await refresh();
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [refresh]);
+
+  const failedCount = items.filter((i) => i.isFailed).length;
+  const pendingCount = items.length - failedCount;
+
+  return {
+    items,
+    isLoading,
+    isProcessing,
+    failedCount,
+    pendingCount,
+    retry,
+    discard,
+    retryAll,
+    syncNow,
     refresh,
   };
 }

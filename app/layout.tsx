@@ -26,6 +26,12 @@ export const metadata: Metadata = {
   description: 'Gerencie seus agendamentos, clientes e profissionais de forma simples e intuitiva. A melhor solução para barbearias, salões de beleza, personal trainers e muito mais.',
   keywords: ['agendamento online', 'barbearia', 'salão de beleza', 'agenda', 'gestão', 'clientes', 'profissionais'],
   authors: [{ name: 'ZapAgenda' }],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'ZapAgenda',
+  },
   icons: {
     icon: [
       {

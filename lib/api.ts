@@ -54,9 +54,9 @@ async function apiFetch<T>(
         data = JSON.parse(text);
       } catch {
         if (response.ok) {
-          return { success: true, data: null as unknown as T };
+          return { success: true, data: null as unknown as T, status: response.status };
         }
-        return { success: false, error: 'Resposta inválida do servidor' };
+        return { success: false, error: 'Resposta inválida do servidor', status: response.status };
       }
     }
     
@@ -65,16 +65,17 @@ async function apiFetch<T>(
       return {
         success: false,
         error: errorMessage,
+        status: response.status,
         retryAfter: data.retryAfter,
       };
     }
 
     // If response has success field, return as-is; otherwise wrap it
     if ('success' in data) {
-      return data;
+      return { ...data, status: response.status };
     }
     
-    return { success: true, data };
+    return { success: true, data, status: response.status };
   } catch {
     return {
       success: false,

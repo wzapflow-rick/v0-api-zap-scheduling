@@ -15,6 +15,7 @@ import { Bell, LogOut, Settings, User, ExternalLink, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ConnectionStatus } from '@/components/connection-status';
+import { SyncQueuePanel } from '@/components/sync-queue-panel';
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -64,8 +65,14 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Connection Status */}
-        <ConnectionStatus compact />
+        {/* Connection Status (abre a fila de sincronização ao clicar) */}
+        <SyncQueuePanel
+          trigger={
+            <button type="button" aria-label="Ver fila de sincronização" className="focus:outline-none">
+              <ConnectionStatus compact />
+            </button>
+          }
+        />
         
         {/* Theme Toggle */}
         <ThemeToggle />

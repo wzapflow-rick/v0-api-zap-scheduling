@@ -1,14 +1,14 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'zapflow-v1';
-const STATIC_CACHE_NAME = 'zapflow-static-v1';
-const API_CACHE_NAME = 'zapflow-api-v1';
+const CACHE_NAME = 'zapflow-v2';
+const STATIC_CACHE_NAME = 'zapflow-static-v2';
+const API_CACHE_NAME = 'zapflow-api-v2';
 
 // Static assets to cache
 const STATIC_ASSETS = [
   '/',
   '/dashboard',
-  '/dashboard/agenda',
+  '/dashboard/agendamentos',
   '/dashboard/clientes',
   '/dashboard/profissionais',
   '/dashboard/servicos',
@@ -25,10 +25,25 @@ const CACHEABLE_API_ROUTES = [
 ];
 
 // Install event - cache static assets
+// IMPORTANTE: usamos cache.put individual em vez de cache.addAll porque
+// addAll e atomico: se UM unico asset retornar 404 (ex.: rota inexistente),
+// toda a instalacao do Service Worker falha. Aqui cada asset e tratado de
+// forma independente, entao um recurso ausente nao quebra o restante do cache.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+    caches.open(STATIC_CACHE_NAME).then(async (cache) => {
+      await Promise.all(
+        STATIC_ASSETS.map(async (asset) => {
+          try {
+            const response = await fetch(asset, { cache: 'no-cache' });
+            if (response.ok) {
+              await cache.put(asset, response);
+            }
+          } catch {
+            // Ignora assets que falharem ao baixar durante a instalacao.
+          }
+        })
+      );
     })
   );
   self.skipWaiting();
@@ -255,10 +270,10 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     
     event.waitUntil(
-      self.registration.showNotification(data.title || 'ZapFlow', {
+      self.registration.showNotification(data.title || 'ZapAgenda', {
         body: data.body,
-        icon: '/icon-192.png',
-        badge: '/badge-72.png',
+        icon: '/apple-icon.png',
+        badge: '/icon-dark-32x32.png',
         data: data.url,
       })
     );

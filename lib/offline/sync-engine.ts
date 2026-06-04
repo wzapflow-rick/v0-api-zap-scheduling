@@ -2,6 +2,8 @@ import {
   getSyncQueue,
   removeFromSyncQueue,
   updateSyncQueueItem,
+  resetSyncQueueItem,
+  discardSyncQueueItem,
   updateSyncStatus,
   saveEntity,
   deleteEntity,
@@ -113,12 +115,32 @@ export async function checkBackendAvailability(): Promise<boolean> {
   }
 }
 
+// Resultado do processamento de um item da fila.
+// - success: sincronizou com o servidor
+// - permanent: falha que NAO deve ser retentada (ex.: conflito de horario,
+//   validacao 4xx). O item vai direto para "failed".
+// - error: mensagem para exibir ao usuario.
+interface ProcessResult {
+  success: boolean;
+  permanent?: boolean;
+  error?: string;
+}
+
+// Decide se um status HTTP representa erro permanente (nao retentavel).
+// 4xx geralmente sao permanentes (ex.: 409 conflito de slot, 422 validacao),
+// exceto 408 (timeout) e 429 (rate limit), que valem retry.
+function isPermanentError(status?: number): boolean {
+  if (!status) return false;
+  if (status === 408 || status === 429) return false;
+  return status >= 400 && status < 500;
+}
+
 // Process a single sync queue item
-async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
+async function processSyncItem(item: SyncQueueItem): Promise<ProcessResult> {
   const { entityType, operationType, entityId, data } = item;
 
   try {
-    let result;
+    let result: { success: boolean; data?: unknown; status?: number; error?: string };
 
     switch (entityType) {
       case 'appointment':
@@ -134,7 +156,7 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
         result = await processServiceSync(operationType, entityId, data as Partial<Service>);
         break;
       default:
-        return false;
+        return { success: false, permanent: true, error: 'Tipo de entidade desconhecido' };
     }
 
     if (result.success) {
@@ -142,16 +164,21 @@ async function processSyncItem(item: SyncQueueItem): Promise<boolean> {
       if (result.data && operationType !== 'delete') {
         await saveEntity(
           `${entityType}s` as 'appointments' | 'clients' | 'professionals' | 'services',
-          result.data,
+          result.data as Appointment | Client | Professional | Service & { id: string },
           'synced'
         );
       }
-      return true;
+      return { success: true };
     }
 
-    return false;
+    return {
+      success: false,
+      permanent: isPermanentError(result.status),
+      error: result.error,
+    };
   } catch {
-    return false;
+    // Excecao inesperada => trata como transitorio (vale retry).
+    return { success: false, permanent: false, error: 'Falha inesperada na sincronizacao' };
   }
 }
 
@@ -160,7 +187,7 @@ async function processAppointmentSync(
   operationType: string,
   entityId: string,
   data: Partial<Appointment>
-): Promise<{ success: boolean; data?: Appointment }> {
+): Promise<{ success: boolean; data?: Appointment; status?: number; error?: string }> {
   switch (operationType) {
     case 'create':
       // Transform data for API
@@ -173,18 +200,28 @@ async function processAppointmentSync(
         notes: data.notes,
       };
       const createResult = await appointmentsApi.create(createData);
-      return { success: createResult.success, data: createResult.data };
+      return {
+        success: createResult.success,
+        data: createResult.data,
+        status: createResult.status,
+        error: createResult.error,
+      };
 
     case 'update':
       const updateResult = await appointmentsApi.update(entityId, data);
-      return { success: updateResult.success, data: updateResult.data };
+      return {
+        success: updateResult.success,
+        data: updateResult.data,
+        status: updateResult.status,
+        error: updateResult.error,
+      };
 
     case 'delete':
       const deleteResult = await appointmentsApi.delete(entityId);
       if (deleteResult.success) {
         await deleteEntity('appointments', entityId);
       }
-      return { success: deleteResult.success };
+      return { success: deleteResult.success, status: deleteResult.status, error: deleteResult.error };
 
     default:
       return { success: false };
@@ -196,22 +233,22 @@ async function processClientSync(
   operationType: string,
   entityId: string,
   data: Partial<Client>
-): Promise<{ success: boolean; data?: Client }> {
+): Promise<{ success: boolean; data?: Client; status?: number; error?: string }> {
   switch (operationType) {
     case 'create':
       const createResult = await clientsApi.create(data);
-      return { success: createResult.success, data: createResult.data };
+      return { success: createResult.success, data: createResult.data, status: createResult.status, error: createResult.error };
 
     case 'update':
       const updateResult = await clientsApi.update(entityId, data);
-      return { success: updateResult.success, data: updateResult.data };
+      return { success: updateResult.success, data: updateResult.data, status: updateResult.status, error: updateResult.error };
 
     case 'delete':
       const deleteResult = await clientsApi.delete(entityId);
       if (deleteResult.success) {
         await deleteEntity('clients', entityId);
       }
-      return { success: deleteResult.success };
+      return { success: deleteResult.success, status: deleteResult.status, error: deleteResult.error };
 
     default:
       return { success: false };
@@ -223,22 +260,22 @@ async function processProfessionalSync(
   operationType: string,
   entityId: string,
   data: Partial<Professional>
-): Promise<{ success: boolean; data?: Professional }> {
+): Promise<{ success: boolean; data?: Professional; status?: number; error?: string }> {
   switch (operationType) {
     case 'create':
       const createResult = await professionalsApi.create(data);
-      return { success: createResult.success, data: createResult.data };
+      return { success: createResult.success, data: createResult.data, status: createResult.status, error: createResult.error };
 
     case 'update':
       const updateResult = await professionalsApi.update(entityId, data);
-      return { success: updateResult.success, data: updateResult.data };
+      return { success: updateResult.success, data: updateResult.data, status: updateResult.status, error: updateResult.error };
 
     case 'delete':
       const deleteResult = await professionalsApi.delete(entityId);
       if (deleteResult.success) {
         await deleteEntity('professionals', entityId);
       }
-      return { success: deleteResult.success };
+      return { success: deleteResult.success, status: deleteResult.status, error: deleteResult.error };
 
     default:
       return { success: false };
@@ -250,22 +287,22 @@ async function processServiceSync(
   operationType: string,
   entityId: string,
   data: Partial<Service>
-): Promise<{ success: boolean; data?: Service }> {
+): Promise<{ success: boolean; data?: Service; status?: number; error?: string }> {
   switch (operationType) {
     case 'create':
       const createResult = await servicesApi.create(data);
-      return { success: createResult.success, data: createResult.data };
+      return { success: createResult.success, data: createResult.data, status: createResult.status, error: createResult.error };
 
     case 'update':
       const updateResult = await servicesApi.update(entityId, data);
-      return { success: updateResult.success, data: updateResult.data };
+      return { success: updateResult.success, data: updateResult.data, status: updateResult.status, error: updateResult.error };
 
     case 'delete':
       const deleteResult = await servicesApi.delete(entityId);
       if (deleteResult.success) {
         await deleteEntity('services', entityId);
       }
-      return { success: deleteResult.success };
+      return { success: deleteResult.success, status: deleteResult.status, error: deleteResult.error };
 
     default:
       return { success: false };
@@ -306,15 +343,31 @@ export async function processQueue(): Promise<void> {
         continue;
       }
 
-      const success = await processSyncItem(item);
+      const result = await processSyncItem(item);
 
-      if (success) {
+      if (result.success) {
         await removeFromSyncQueue(item.id);
+      } else if (result.permanent) {
+        // Erro permanente (conflito de horario, validacao): nao adianta
+        // retentar. Marca a entidade como "failed" e mantem o item na fila
+        // com tentativas no maximo, para o usuario resolver manualmente.
+        await updateSyncQueueItem(item.id, {
+          attempts: MAX_RETRY_ATTEMPTS,
+          lastAttempt: Date.now(),
+          error: result.error || 'Conflito ao sincronizar',
+        });
+        await updateSyncStatus(
+          `${item.entityType}s` as 'appointments' | 'clients' | 'professionals' | 'services',
+          item.entityId,
+          'failed'
+        );
+        failedCount++;
       } else {
+        // Erro transitorio: agenda novo retry com backoff.
         await updateSyncQueueItem(item.id, {
           attempts: item.attempts + 1,
           lastAttempt: Date.now(),
-          error: 'Sync failed',
+          error: result.error || 'Falha temporaria na sincronizacao',
         });
         pendingCount++;
       }
@@ -463,6 +516,39 @@ export async function forceSync(): Promise<void> {
   if (isAvailable) {
     await processQueue();
   }
+}
+
+// Reprocessa um item que falhou: zera as tentativas e tenta sincronizar.
+export async function retryFailedItem(queueItemId: string): Promise<void> {
+  await resetSyncQueueItem(queueItemId);
+  await refreshPendingCounts();
+  await forceSync();
+}
+
+// Descarta um item que falhou (reverte a alteracao pendente).
+export async function discardFailedItem(queueItemId: string): Promise<void> {
+  await discardSyncQueueItem(queueItemId);
+  await refreshPendingCounts();
+}
+
+// Reprocessa todos os itens que excederam tentativas.
+export async function retryAllFailed(): Promise<void> {
+  const queue = await getSyncQueue();
+  for (const item of queue) {
+    if (item.attempts >= MAX_RETRY_ATTEMPTS) {
+      await resetSyncQueueItem(item.id);
+    }
+  }
+  await refreshPendingCounts();
+  await forceSync();
+}
+
+// Recalcula contadores de pendentes/falhas e propaga para os listeners.
+async function refreshPendingCounts(): Promise<void> {
+  const queue = await getSyncQueue();
+  const failedCount = queue.filter((i) => i.attempts >= MAX_RETRY_ATTEMPTS).length;
+  const pendingCount = queue.length - failedCount;
+  updateSyncStatusState({ pendingCount, failedCount });
 }
 
 // Conflict resolution: last-write-wins with timestamp
