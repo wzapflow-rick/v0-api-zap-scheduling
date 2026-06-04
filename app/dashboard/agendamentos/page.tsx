@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Loader2, AlertCircle, Check, X, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { appointmentsApi, professionalsApi } from '@/lib/api';
+import { offlineAppointmentsApi as appointmentsApi, offlineProfessionalsApi as professionalsApi } from '@/lib/offline/api-wrapper';
 import { sendMessageWithDebug, getMessageTypeForStatus, USE_BACKEND_MESSAGES } from '@/lib/message-service';
 import type { Appointment, AppointmentStatus, Professional } from '@/types';
 import { cn } from '@/lib/utils';

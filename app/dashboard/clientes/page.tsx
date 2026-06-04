@@ -17,7 +17,7 @@ import { Plus, Search, Pencil, Trash2, Users, Loader2, AlertCircle } from 'lucid
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { clientsApi } from '@/lib/api';
+import { offlineClientsApi as clientsApi } from '@/lib/offline/api-wrapper';
 import type { Client } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ClientesSkeleton } from '@/components/skeletons/dashboard-skeleton';

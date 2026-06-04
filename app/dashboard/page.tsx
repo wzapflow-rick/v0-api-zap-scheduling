@@ -19,7 +19,8 @@ import {
   Zap
 } from 'lucide-react';
 import Link from 'next/link';
-import { establishmentApi, appointmentsApi, clientsApi } from '@/lib/api';
+import { establishmentApi } from '@/lib/api';
+import { offlineAppointmentsApi as appointmentsApi, offlineClientsApi as clientsApi } from '@/lib/offline/api-wrapper';
 import type { Appointment, AppointmentStatus, Client } from '@/types';
 import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';

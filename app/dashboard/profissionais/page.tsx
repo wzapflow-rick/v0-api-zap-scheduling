@@ -20,7 +20,7 @@ import { Plus, Search, Pencil, Trash2, Briefcase, Loader2, AlertCircle } from 'l
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { professionalsApi, servicesApi } from '@/lib/api';
+import { offlineProfessionalsApi as professionalsApi, offlineServicesApi as servicesApi } from '@/lib/offline/api-wrapper';
 import type { Professional, Service } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';

@@ -17,7 +17,7 @@ import { Plus, Search, Pencil, Trash2, Scissors, Loader2, AlertCircle } from 'lu
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { servicesApi } from '@/lib/api';
+import { offlineServicesApi as servicesApi } from '@/lib/offline/api-wrapper';
 import type { Service } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ServicosSkeleton } from '@/components/skeletons/dashboard-skeleton';
