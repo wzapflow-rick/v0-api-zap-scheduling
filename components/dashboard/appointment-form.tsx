@@ -17,7 +17,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, CalendarIcon, Plus, UserPlus } from 'lucide-react';
-import { professionalsApi, servicesApi, clientsApi, appointmentsApi } from '@/lib/api';
+import {
+  offlineProfessionalsApi as professionalsApi,
+  offlineServicesApi as servicesApi,
+  offlineClientsApi as clientsApi,
+  offlineAppointmentsApi as appointmentsApi,
+} from '@/lib/offline/api-wrapper';
 import type { Professional, Service, Client, TimeSlot } from '@/types';
 import { cn } from '@/lib/utils';
 import { useAutoMessage } from '@/hooks/use-auto-message';

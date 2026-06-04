@@ -1,9 +1,10 @@
 // Message Service
 // Handles sending automatic messages via frontend API routes
-// When backend is ready, set USE_BACKEND_MESSAGES = true to disable frontend sending
 
 // Toggle this to switch between frontend and backend message sending
-export const USE_BACKEND_MESSAGES = true;
+// false = use frontend API routes (Evolution API direct)
+// true = use backend proxy (disabled)
+export const USE_BACKEND_MESSAGES = false;
 
 // Debug mode - shows toast with instance name on every message attempt
 export const DEBUG_MESSAGES = false;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { useSubscription } from '@/hooks/use-subscription';
+import { useSubscription, useTrialEligibility } from '@/hooks/use-subscription';
 import { Loader2, Lock, Sparkles, ArrowRight, CheckCircle2, AlertTriangle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +52,13 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
     trialDaysRemaining,
     plan 
   } = useSubscription();
+  const { canTrial, reason: trialReason } = useTrialEligibility();
   const [showPaywall, setShowPaywall] = useState(false);
+
+  // Usuario ja consumiu o teste gratis (ou nao pode mais iniciar um)
+  const alreadyUsedTrial = trialReason === 'already_used_trial' || isTrialExpired;
+  // So oferece teste gratis quem realmente pode iniciar um
+  const canStartTrial = canTrial && !alreadyUsedTrial;
 
   // Verifica se a rota atual e gratuita
   const isFreRoute = FREE_ROUTES.some(route => pathname.startsWith(route));
@@ -155,10 +161,14 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
               <Lock className="h-8 w-8 text-primary" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">
-              Comece seu teste gratis de 7 dias
+              {canStartTrial
+                ? 'Comece seu teste gratis de 7 dias'
+                : 'Assine para continuar usando o ZapAgenda'}
             </h1>
             <p className="mt-2 text-muted-foreground">
-              Experimente todas as funcionalidades sem compromisso. Sem necessidade de cartao de credito!
+              {canStartTrial
+                ? 'Experimente todas as funcionalidades sem compromisso. Sem necessidade de cartao de credito!'
+                : 'Escolha um plano abaixo para desbloquear todas as funcionalidades. Seus dados estao salvos e voce continua de onde parou!'}
             </p>
           </div>
 
@@ -201,13 +211,15 @@ export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
           <div className="flex flex-col items-center gap-4">
             <Button size="lg" className="bg-gradient-to-r from-primary to-emerald-500" asChild>
               <Link href="/pricing">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Comecar Teste Gratis
+                {canStartTrial && <Sparkles className="mr-2 h-4 w-4" />}
+                {canStartTrial ? 'Comecar Teste Gratis' : 'Assinar Agora'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <p className="text-sm text-muted-foreground">
-              7 dias gratis para testar. Sem cartao de credito.
+              {canStartTrial
+                ? '7 dias gratis para testar. Sem cartao de credito.'
+                : 'Pagamento seguro via Mercado Pago. Cancele quando quiser.'}
             </p>
           </div>
         </div>

@@ -320,6 +320,50 @@ export async function updateSyncQueueItem(
   }
 }
 
+// Reseta as tentativas de um item para reprocessamento manual imediato.
+export async function resetSyncQueueItem(id: string): Promise<void> {
+  const db = await getDB();
+  const item = await db.get('syncQueue', id);
+  if (item) {
+    await db.put('syncQueue', {
+      ...item,
+      attempts: 0,
+      lastAttempt: undefined,
+      error: undefined,
+    });
+    // Volta a entidade local para "pending" para refletir na UI.
+    const storeName = `${item.entityType}s` as 'appointments' | 'clients' | 'professionals' | 'services';
+    const entity = await db.get(storeName, item.entityId);
+    if (entity) {
+      entity.syncStatus = 'pending';
+      await db.put(storeName, entity);
+    }
+  }
+}
+
+// Remove um item da fila e marca a entidade local de volta como "synced"
+// (descarta a alteracao pendente que estava falhando).
+export async function discardSyncQueueItem(id: string): Promise<void> {
+  const db = await getDB();
+  const item = await db.get('syncQueue', id);
+  if (!item) return;
+
+  await db.delete('syncQueue', id);
+
+  const storeName = `${item.entityType}s` as 'appointments' | 'clients' | 'professionals' | 'services';
+  // Itens criados offline (local_) que nunca chegaram ao servidor sao
+  // removidos por completo ao descartar. Os demais voltam a "synced".
+  if (isLocalId(item.entityId) && item.operationType === 'create') {
+    await db.delete(storeName, item.entityId);
+  } else {
+    const entity = await db.get(storeName, item.entityId);
+    if (entity) {
+      entity.syncStatus = 'synced';
+      await db.put(storeName, entity);
+    }
+  }
+}
+
 // ==================== User & Establishment ====================
 
 export async function saveUser(user: User): Promise<void> {

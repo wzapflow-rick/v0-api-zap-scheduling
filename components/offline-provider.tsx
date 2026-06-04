@@ -22,10 +22,34 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
         .register('/sw.js')
         .then((registration) => {
           console.log('Service Worker registered:', registration.scope);
+
+          // Quando um novo SW for encontrado, pede para ele assumir
+          // imediatamente (evita ficar preso em "waiting" servindo a
+          // versao antiga com a lista de assets quebrada).
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          });
+
+          // Procura por atualizacoes do SW periodicamente.
+          registration.update().catch(() => {});
         })
         .catch((error) => {
           console.error('Service Worker registration failed:', error);
         });
+
+      // Recarrega a pagina uma unica vez quando o novo SW assumir o controle.
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
     }
 
     // Start sync engine

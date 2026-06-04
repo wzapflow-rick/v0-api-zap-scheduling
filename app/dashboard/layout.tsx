@@ -33,7 +33,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       
       <div className={cn(
         'transition-all duration-300 ease-in-out',
-        collapsed ? 'lg:pl-[72px]' : 'lg:pl-[240px]'
+        collapsed ? 'lg:pl-20' : 'lg:pl-64'
       )}>
         <OfflineBanner />
         <DashboardHeader onMenuClick={() => setMobileOpen(true)} />

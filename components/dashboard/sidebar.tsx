@@ -87,7 +87,7 @@ function NavItem({
           "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300",
           isActive
             ? "bg-gradient-to-r from-primary/20 to-primary/5 text-primary"
-            : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+            : "text-white/55 hover:text-white hover:bg-white/[0.06]"
         )}
       >
         {/* Barra indicadora lateral animada */}
@@ -108,12 +108,12 @@ function NavItem({
         <div className={cn(
           "relative flex items-center justify-center size-9 rounded-lg transition-all duration-300 shrink-0",
           isActive 
-            ? "bg-primary/20 shadow-[0_0_20px_rgba(34,197,94,0.3)]" 
-            : "bg-white/5 group-hover:bg-white/10"
+            ? "bg-primary/20 shadow-[0_0_20px_rgba(34,209,90,0.35)]" 
+            : "bg-white/[0.04] group-hover:bg-white/[0.08]"
         )}>
           <item.icon className={cn(
             "size-[18px] transition-all duration-300",
-            isActive ? "text-primary" : "text-slate-400 group-hover:text-slate-200"
+            isActive ? "text-primary" : "text-white/55 group-hover:text-white"
           )} />
         </div>
 
@@ -125,7 +125,7 @@ function NavItem({
             exit={{ opacity: 0, width: 0 }}
             className={cn(
               "text-sm font-medium whitespace-nowrap transition-colors duration-300",
-              isActive ? "text-primary font-semibold" : "text-slate-300 group-hover:text-white"
+              isActive ? "text-primary font-semibold" : "text-white/70 group-hover:text-white"
             )}
           >
             {item.label}
@@ -134,7 +134,7 @@ function NavItem({
 
         {/* Seta indicadora no hover */}
         {isOpen && !isActive && (
-          <ChevronRight className="size-4 text-slate-500 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 ml-auto" />
+          <ChevronRight className="size-4 text-white/40 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 ml-auto" />
         )}
       </Link>
     </motion.div>
@@ -154,12 +154,14 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
     <aside
       className={cn(
         "fixed left-0 top-0 h-full transition-all duration-300 z-40 flex flex-col",
-        "bg-gradient-to-b from-[#0c1929] via-[#0a1525] to-[#081220]",
-        "border-r border-white/5",
-        "shadow-[4px_0_24px_rgba(0,0,0,0.3)]",
+        "bg-gradient-to-b from-[#0B1310] via-[#0A0F0D] to-[#080B0A]",
+        "border-r border-white/[0.06]",
+        "shadow-[4px_0_24px_rgba(0,0,0,0.4)]",
         isOpen ? "w-64" : "w-20"
       )}
     >
+      {/* Glow verde sutil no topo */}
+      <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-40 rounded-full bg-primary/20 blur-[80px]" />
       {/* Header - Logo */}
       <div className="p-4 flex items-center justify-center">
         <motion.div 
@@ -218,7 +220,7 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
             <motion.span 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 block"
+              className="px-3 text-[10px] font-bold uppercase tracking-widest text-white/35 mb-2 block"
             >
               Administracao
             </motion.span>
@@ -250,12 +252,12 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
           onClick={toggleCollapsed}
           className={cn(
             "group relative flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-300",
-            "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+            "text-white/55 hover:text-white hover:bg-white/[0.06]"
           )}
         >
-          <div className="relative flex items-center justify-center size-9 rounded-lg bg-white/5 group-hover:bg-white/10 transition-all duration-300 shrink-0">
+          <div className="relative flex items-center justify-center size-9 rounded-lg bg-white/[0.04] group-hover:bg-white/[0.08] transition-all duration-300 shrink-0">
             <ChevronLeft className={cn(
-              "size-[18px] text-slate-400 group-hover:text-slate-200 transition-all duration-300",
+              "size-[18px] text-white/55 group-hover:text-white transition-all duration-300",
               collapsed && "rotate-180"
             )} />
           </div>
@@ -264,9 +266,9 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
             <motion.span 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-sm font-medium text-slate-300 group-hover:text-white whitespace-nowrap"
-            >
-              Recolher
+            className="text-sm font-medium text-white/70 group-hover:text-white whitespace-nowrap"
+          >
+            Recolher
             </motion.span>
           )}
         </motion.button>

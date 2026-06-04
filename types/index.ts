@@ -223,6 +223,7 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  status?: number; // HTTP status code, usado para distinguir erros permanentes de transitorios
   retryAfter?: number; // Rate limiting - seconds to wait before retrying
   pagination?: {
     page: number;

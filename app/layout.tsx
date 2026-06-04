@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/components/theme-provider';
 import { OfflineProvider } from '@/components/offline-provider';
+import { KeyboardNavigationDetector } from '@/components/keyboard-navigation-detector';
 import './globals.css';
 
 const geist = Geist({ 
@@ -25,6 +26,12 @@ export const metadata: Metadata = {
   description: 'Gerencie seus agendamentos, clientes e profissionais de forma simples e intuitiva. A melhor solução para barbearias, salões de beleza, personal trainers e muito mais.',
   keywords: ['agendamento online', 'barbearia', 'salão de beleza', 'agenda', 'gestão', 'clientes', 'profissionais'],
   authors: [{ name: 'ZapAgenda' }],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'ZapAgenda',
+  },
   icons: {
     icon: [
       {
@@ -61,6 +68,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background">
+        <KeyboardNavigationDetector />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

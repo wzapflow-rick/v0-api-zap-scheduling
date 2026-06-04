@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Calendar, Clock, User, Briefcase, Phone, Mail, FileText, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { appointmentsApi } from '@/lib/api';
+import { offlineAppointmentsApi as appointmentsApi } from '@/lib/offline/api-wrapper';
 import type { AppointmentStatus } from '@/types';
 import { cn } from '@/lib/utils';
 

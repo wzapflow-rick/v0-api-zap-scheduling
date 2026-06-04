@@ -241,6 +241,10 @@ export const offlineAppointmentsApi = {
 
     return { success: false, error: 'Agendamento não encontrado' };
   },
+
+  // Slots dependem de calculo do servidor - somente online.
+  getSlots: (params: { professionalId: string; serviceId: string; date: string }) =>
+    appointmentsApi.getSlots(params),
 };
 
 // ==================== Clients API Wrapper ====================
@@ -362,6 +366,9 @@ export const offlineClientsApi = {
 
     return { success: true, data: undefined };
   },
+
+  // Historico agregado depende do servidor - somente online.
+  history: (id: string) => clientsApi.history(id),
 };
 
 // ==================== Professionals API Wrapper ====================
@@ -619,4 +626,8 @@ export const offlineServicesApi = {
 
     return { success: true, data: undefined };
   },
+
+  // Vinculo de profissionais depende do servidor - somente online.
+  assignProfessionals: (id: string, professionalIds: string[]) =>
+    servicesApi.assignProfessionals(id, professionalIds),
 };
