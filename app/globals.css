@@ -5,35 +5,35 @@
 
 :root {
   /* ZapFlow Light Theme */
-  --background: #F5F7FA;
+  --background: #EEF1F5;
   --foreground: #0A0F14;
   --card: #FFFFFF;
   --card-foreground: #0A0F14;
   --popover: #FFFFFF;
   --popover-foreground: #0A0F14;
   
-  /* Primary - Verde Flow */
-  --primary: #22D15A;
-  --primary-foreground: #0A0F14;
+  /* Primary - Verde Energia (darker green for contrast on light bg) */
+  --primary: #15A847;
+  --primary-foreground: #FFFFFF;
   
   /* Secondary */
-  --secondary: #E8EAED;
-  --secondary-foreground: #0A0F14;
+  --secondary: #E4E8ED;
+  --secondary-foreground: #1A2027;
   
-  /* Muted */
-  --muted: #E8EAED;
-  --muted-foreground: #A1A7B3;
+  /* Muted - darker text for readability */
+  --muted: #E4E8ED;
+  --muted-foreground: #5A6573;
   
   /* Accent */
-  --accent: #E8F5EC;
-  --accent-foreground: #22D15A;
+  --accent: #DCF3E4;
+  --accent-foreground: #128A3B;
   
-  --destructive: #EF4444;
+  --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
   
-  --border: #E2E4E8;
-  --input: #E2E4E8;
-  --ring: #22D15A;
+  --border: #D6DBE1;
+  --input: #D6DBE1;
+  --ring: #15A847;
   
   /* Charts */
   --chart-1: #22D15A;
@@ -65,34 +65,34 @@
 
 .dark {
   /* ZapFlow Dark Theme - Based on brand guide */
-  --background: #0A0F14;
+  --background: #080B0A;
   --foreground: #F5F7FA;
-  --card: #0B1010;
+  --card: #11181A;
   --card-foreground: #F5F7FA;
-  --popover: #0B1010;
+  --popover: #11181A;
   --popover-foreground: #F5F7FA;
   
   /* Primary - Verde Flow */
   --primary: #22D15A;
-  --primary-foreground: #0A0F14;
+  --primary-foreground: #06120A;
   
   /* Secondary */
-  --secondary: #1A1F24;
+  --secondary: #1B2326;
   --secondary-foreground: #F5F7FA;
   
   /* Muted */
-  --muted: #1A1F24;
-  --muted-foreground: #A1A7B3;
+  --muted: #1B2326;
+  --muted-foreground: #95A0AD;
   
   /* Accent */
-  --accent: rgba(34, 209, 90, 0.1);
+  --accent: rgba(34, 209, 90, 0.12);
   --accent-foreground: #7CFF6B;
   
   --destructive: #DC2626;
   --destructive-foreground: #F5F7FA;
   
-  --border: #1F2428;
-  --input: #1F2428;
+  --border: #232C2F;
+  --input: #232C2F;
   --ring: #22D15A;
   
   /* Charts */
@@ -278,4 +278,48 @@ textarea:focus-visible,
 :focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
+}
+
+/* ===== Animations & Elevation ===== */
+@keyframes zap-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes zap-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.animate-fade-up {
+  animation: zap-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pulse-dot {
+  animation: zap-pulse-dot 1.8s ease-in-out infinite;
+}
+
+/* Card hover lift */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.18);
+}
+.dark .hover-lift:hover {
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(34, 209, 90, 0.08);
+}
+
+/* Elevated card shadow for light mode depth */
+.card-elevated {
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 4px 16px -4px rgba(16, 24, 40, 0.08);
+}
+.dark .card-elevated {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Green glow accent for primary cards */
+.glow-primary {
+  box-shadow: 0 0 0 1px rgba(34, 209, 90, 0.2), 0 8px 32px -8px rgba(34, 209, 90, 0.35);
 }
