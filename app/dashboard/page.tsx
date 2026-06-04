@@ -3,48 +3,45 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
 import { useSearchParams } from 'next/navigation';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   Calendar, 
-  Users, 
-  DollarSign, 
-  TrendingUp, 
   Plus, 
-  Clock, 
-  Loader2, 
-  AlertCircle,
+  DollarSign,
+  Users,
+  TrendingUp,
+  Clock,
   ArrowUpRight,
-  ArrowDownRight,
-  Star,
-  BarChart3
+  ChevronRight,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import { establishmentApi, appointmentsApi, clientsApi } from '@/lib/api';
 import type { Appointment, AppointmentStatus, Client } from '@/types';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { toast } from 'sonner';
 import { DashboardSkeleton } from '@/components/skeletons/dashboard-skeleton';
+import { motion } from 'motion/react';
 
-const statusColors: Record<AppointmentStatus, string> = {
-  PENDING: 'bg-warning/10 text-warning border-warning/20',
-  CONFIRMED: 'bg-primary/10 text-primary border-primary/20',
-  COMPLETED: 'bg-success/10 text-success border-success/20',
-  CANCELLED: 'bg-destructive/10 text-destructive border-destructive/20',
-  NO_SHOW: 'bg-muted text-muted-foreground border-muted',
+// Status config
+const statusConfig: Record<AppointmentStatus, { bg: string; text: string; dot: string }> = {
+  PENDING: { bg: 'bg-amber-500/10', text: 'text-amber-500', dot: 'bg-amber-500' },
+  CONFIRMED: { bg: 'bg-primary/10', text: 'text-primary', dot: 'bg-primary' },
+  COMPLETED: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', dot: 'bg-emerald-500' },
+  CANCELLED: { bg: 'bg-red-500/10', text: 'text-red-500', dot: 'bg-red-500' },
+  NO_SHOW: { bg: 'bg-slate-500/10', text: 'text-slate-500', dot: 'bg-slate-500' },
 };
 
 const statusLabels: Record<AppointmentStatus, string> = {
   PENDING: 'Pendente',
   CONFIRMED: 'Confirmado',
-  COMPLETED: 'Concluído',
+  COMPLETED: 'Concluido',
   CANCELLED: 'Cancelado',
-  NO_SHOW: 'Não compareceu',
+  NO_SHOW: 'Nao compareceu',
 };
 
 // Fetchers
@@ -58,7 +55,6 @@ const monthlyAppointmentsFetcher = async (key: [string, string, string]) => {
   const [, startDate, endDate] = key;
   const res = await appointmentsApi.list({ startDate, endDate, limit: 1000 });
   if (!res.success) return [];
-  // Handle both array and object with appointments property
   const data = res.data;
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.appointments)) return data.appointments;
@@ -68,23 +64,109 @@ const monthlyAppointmentsFetcher = async (key: [string, string, string]) => {
 const clientsFetcher = async () => {
   const res = await clientsApi.list({ limit: 1000 });
   if (!res.success) return [];
-  // Handle both array and object with clients property
   const data = res.data;
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.clients)) return data.clients;
   return [];
 };
 
+// Badge component
+function RealTimeBadge() {
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 border border-primary/20">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+      </span>
+      <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">Real-time</span>
+    </div>
+  );
+}
+
+// Stat Card component
+function StatCard({ 
+  title, 
+  value, 
+  subtitle, 
+  icon: Icon, 
+  iconBg = 'bg-primary/10',
+  iconColor = 'text-primary',
+  trend,
+  showRealTime = false,
+  highlight = false,
+  delay = 0
+}: {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ElementType;
+  iconBg?: string;
+  iconColor?: string;
+  trend?: { value: number; positive: boolean };
+  showRealTime?: boolean;
+  highlight?: boolean;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+    >
+      <Card className={cn(
+        "relative overflow-hidden transition-all duration-300 hover:shadow-lg",
+        highlight 
+          ? "bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border-primary/30" 
+          : "bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30"
+      )}>
+        {showRealTime && (
+          <div className="absolute top-3 right-3">
+            <RealTimeBadge />
+          </div>
+        )}
+        <CardContent className="p-5">
+          <div className="flex items-start gap-4">
+            <div className={cn(
+              "flex items-center justify-center w-12 h-12 rounded-xl",
+              iconBg
+            )}>
+              <Icon className={cn("w-6 h-6", iconColor)} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
+              {(subtitle || trend) && (
+                <div className="flex items-center gap-2 mt-1">
+                  {trend && (
+                    <span className={cn(
+                      "text-xs font-medium",
+                      trend.positive ? "text-emerald-500" : "text-red-500"
+                    )}>
+                      {trend.positive ? '+' : ''}{trend.value.toFixed(1)}%
+                    </span>
+                  )}
+                  {subtitle && (
+                    <span className="text-xs text-muted-foreground">{subtitle}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 export default function DashboardPage() {
   const [chartPeriod, setChartPeriod] = useState<'weekly' | 'monthly'>('weekly');
   const searchParams = useSearchParams();
   const paymentStatus = searchParams.get('payment');
   
-  // Handle payment callback
   useEffect(() => {
     if (paymentStatus === 'success') {
       toast.success('Pagamento realizado com sucesso!', {
-        description: 'Sua assinatura está ativa.',
+        description: 'Sua assinatura esta ativa.',
       });
     } else if (paymentStatus === 'failure') {
       toast.error('Falha no pagamento', {
@@ -92,7 +174,7 @@ export default function DashboardPage() {
       });
     } else if (paymentStatus === 'pending') {
       toast.info('Pagamento pendente', {
-        description: 'Aguarde a confirmação do pagamento.',
+        description: 'Aguarde a confirmacao do pagamento.',
       });
     }
   }, [paymentStatus]);
@@ -100,40 +182,29 @@ export default function DashboardPage() {
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
   
-  // Current month range
   const monthStart = format(startOfMonth(today), 'yyyy-MM-dd');
   const monthEnd = format(endOfMonth(today), 'yyyy-MM-dd');
-  
-  // Previous month range (for comparison)
   const prevMonthStart = format(startOfMonth(subMonths(today, 1)), 'yyyy-MM-dd');
   const prevMonthEnd = format(endOfMonth(subMonths(today, 1)), 'yyyy-MM-dd');
-  
-  // Week range for chart
-  const weekStart = format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-  const weekEnd = format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
-  // Fetch establishment data
   const { data: establishment, isLoading: isLoadingEstablishment } = useSWR(
     'establishment',
     establishmentFetcher,
     { revalidateOnFocus: false }
   );
 
-  // Fetch current month appointments
   const { data: monthlyAppointments, isLoading: isLoadingMonthly } = useSWR(
     ['appointments-monthly', monthStart, monthEnd],
     monthlyAppointmentsFetcher,
     { revalidateOnFocus: false }
   );
 
-  // Fetch previous month appointments (for comparison)
   const { data: prevMonthAppointments } = useSWR(
     ['appointments-prev-month', prevMonthStart, prevMonthEnd],
     monthlyAppointmentsFetcher,
     { revalidateOnFocus: false }
   );
 
-  // Fetch clients
   const { data: clients, isLoading: isLoadingClients } = useSWR(
     'clients-all',
     clientsFetcher,
@@ -142,73 +213,55 @@ export default function DashboardPage() {
 
   const isLoading = isLoadingEstablishment || isLoadingMonthly || isLoadingClients;
 
-  // Calculate metrics
   const metrics = useMemo(() => {
     const allAppointments = monthlyAppointments || [];
     const prevAppointments = prevMonthAppointments || [];
     const allClients = clients || [];
     
-    // Today's appointments
     const todayAppointments = allAppointments.filter((a: Appointment) => 
       a.date === todayStr || (a.date && a.date.startsWith(todayStr))
     );
     
-    // Monthly revenue (completed appointments)
     const monthlyRevenue = allAppointments
       .filter((a: Appointment) => a.status === 'COMPLETED')
       .reduce((sum: number, a: Appointment) => sum + (parseFloat(String(a.price)) || 0), 0);
     
-    // Previous month revenue
     const prevMonthRevenue = prevAppointments
       .filter((a: Appointment) => a.status === 'COMPLETED')
       .reduce((sum: number, a: Appointment) => sum + (parseFloat(String(a.price)) || 0), 0);
     
-    // Revenue change percentage
     const revenueChange = prevMonthRevenue > 0 
       ? ((monthlyRevenue - prevMonthRevenue) / prevMonthRevenue) * 100 
       : 0;
     
-    // New clients this month
     const thisMonthClients = allClients.filter((c: Client) => {
       if (!c.createdAt) return false;
       const createdDate = new Date(c.createdAt);
       return createdDate >= new Date(monthStart) && createdDate <= new Date(monthEnd);
     });
     
-    // New clients last week
-    const lastWeekClients = allClients.filter((c: Client) => {
-      if (!c.createdAt) return false;
-      const createdDate = new Date(c.createdAt);
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return createdDate >= weekAgo;
-    });
-    
-    // Average ticket
     const completedAppointments = allAppointments.filter((a: Appointment) => a.status === 'COMPLETED');
     const avgTicket = completedAppointments.length > 0 
       ? monthlyRevenue / completedAppointments.length 
       : 0;
     
-    // Slots available today
-    const confirmedToday = todayAppointments.filter((a: Appointment) => 
-      a.status === 'CONFIRMED' || a.status === 'PENDING'
+    const pendingToday = todayAppointments.filter((a: Appointment) => 
+      a.status === 'PENDING' || a.status === 'CONFIRMED'
     ).length;
     
     return {
       monthlyRevenue,
       revenueChange,
       todayAppointmentsCount: todayAppointments.length,
-      confirmedToday,
+      pendingToday,
       newClientsCount: thisMonthClients.length,
-      newClientsWeek: lastWeekClients.length,
       avgTicket,
       completedCount: completedAppointments.length,
+      totalAppointments: allAppointments.length,
       todayAppointments,
     };
   }, [monthlyAppointments, prevMonthAppointments, clients, todayStr, monthStart, monthEnd]);
 
-  // Chart data
   const chartData = useMemo(() => {
     const appointments = monthlyAppointments || [];
     
@@ -228,13 +281,12 @@ export default function DashboardPage() {
           .reduce((sum: number, a: Appointment) => sum + (parseFloat(String(a.price)) || 0), 0);
         
         return {
-          name: format(day, 'EEE', { locale: ptBR }).charAt(0).toUpperCase() + format(day, 'EEE', { locale: ptBR }).slice(1),
+          name: format(day, 'EEE', { locale: ptBR }).substring(0, 3),
           value: revenue,
           appointments: dayAppointments.length,
         };
       });
     } else {
-      // Monthly - group by week
       const weeks = [];
       let currentDate = startOfMonth(today);
       const monthEndDate = endOfMonth(today);
@@ -254,7 +306,7 @@ export default function DashboardPage() {
           .reduce((sum: number, a: Appointment) => sum + (parseFloat(String(a.price)) || 0), 0);
         
         weeks.push({
-          name: `Sem ${weekNum}`,
+          name: `S${weekNum}`,
           value: revenue,
           appointments: weekAppointments.length,
         });
@@ -268,7 +320,6 @@ export default function DashboardPage() {
     }
   }, [monthlyAppointments, chartPeriod, today]);
 
-  // Recent appointments (upcoming or recent)
   const recentAppointments = useMemo(() => {
     const all = monthlyAppointments || [];
     return all
@@ -299,338 +350,330 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard Geral</h1>
-          <p className="text-muted-foreground">
-            {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-          </p>
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col gap-1"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              Ola, {establishment?.name || 'Estabelecimento'}
+            </h1>
+            <p className="text-muted-foreground">
+              Aqui esta o que esta acontecendo com seu negocio hoje.
+            </p>
+          </div>
+          <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Link href="/dashboard/agendamentos/novo" className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Novo Agendamento
+            </Link>
+          </Button>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/agendamentos/novo">
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Agendamento
-          </Link>
-        </Button>
+      </motion.div>
+
+      {/* Stats Grid */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Faturamento Bruto"
+          value={formatCurrency(metrics.monthlyRevenue)}
+          icon={DollarSign}
+          iconBg="bg-emerald-500/10"
+          iconColor="text-emerald-500"
+          trend={{ value: metrics.revenueChange, positive: metrics.revenueChange >= 0 }}
+          showRealTime
+          delay={0}
+        />
+        <StatCard
+          title="Total de Agendamentos"
+          value={metrics.totalAppointments}
+          subtitle="este mes"
+          icon={Calendar}
+          iconBg="bg-blue-500/10"
+          iconColor="text-blue-500"
+          showRealTime
+          delay={0.1}
+        />
+        <StatCard
+          title="Ticket Medio"
+          value={formatCurrency(metrics.avgTicket)}
+          subtitle={`${metrics.completedCount} servicos`}
+          icon={TrendingUp}
+          iconBg="bg-purple-500/10"
+          iconColor="text-purple-500"
+          delay={0.2}
+        />
+        <StatCard
+          title="Agendamentos Pendentes"
+          value={metrics.pendingToday}
+          subtitle="hoje"
+          icon={Zap}
+          iconBg="bg-primary/20"
+          iconColor="text-primary"
+          highlight
+          delay={0.3}
+        />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Faturamento Mensal */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Faturamento Mensal
-            </CardTitle>
-            <div className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full",
-              metrics.revenueChange >= 0 ? "bg-success/10" : "bg-destructive/10"
-            )}>
-              {metrics.revenueChange >= 0 ? (
-                <ArrowUpRight className="h-4 w-4 text-success" />
-              ) : (
-                <ArrowDownRight className="h-4 w-4 text-destructive" />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metrics.monthlyRevenue)}</div>
-            <p className={cn(
-              "text-xs",
-              metrics.revenueChange >= 0 ? "text-success" : "text-destructive"
-            )}>
-              {metrics.revenueChange >= 0 ? '+' : ''}{metrics.revenueChange.toFixed(1)}% em relação ao mês passado
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Agendamentos Hoje */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Agendamentos Hoje
-            </CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-              <Calendar className="h-4 w-4 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.todayAppointmentsCount}</div>
-            <p className="text-xs text-muted-foreground">
-              {metrics.confirmedToday} confirmados
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Novos Clientes */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Novos Clientes
-            </CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning/10">
-              <Star className="h-4 w-4 text-warning" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.newClientsCount}</div>
-            <p className="text-xs text-success">
-              +{metrics.newClientsWeek} esta semana
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Ticket Médio */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ticket Médio
-            </CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metrics.avgTicket)}</div>
-            <p className="text-xs text-muted-foreground">
-              Baseado em {metrics.completedCount} serviços
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Chart and Recent Appointments */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Chart and Appointments Grid */}
+      <div className="grid gap-6 lg:grid-cols-5">
         {/* Chart */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Fluxo de Agendamentos ({chartPeriod === 'weekly' ? 'Semana' : 'Mês'})</CardTitle>
-              <CardDescription>Receita por período</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={chartPeriod === 'weekly' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setChartPeriod('weekly')}
-              >
-                Semanal
-              </Button>
-              <Button
-                variant={chartPeriod === 'monthly' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setChartPeriod('monthly')}
-              >
-                Mensal
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                    tickFormatter={(value) => `R$${value}`}
-                  />
-                  <Tooltip 
-                    formatter={(value: number) => [formatCurrency(value), 'Receita']}
-                    labelFormatter={(label) => label}
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-                      padding: '8px 12px',
-                    }}
-                    labelStyle={{
-                      color: '#111827',
-                      fontWeight: 600,
-                      marginBottom: '4px',
-                    }}
-                    itemStyle={{
-                      color: '#374151',
-                    }}
-                    cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
-                  />
-                  <Bar 
-                    dataKey="value" 
-                    fill="hsl(var(--primary))" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Appointments */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Agendamentos Recentes</CardTitle>
-            <CardDescription>Próximos agendamentos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentAppointments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Calendar className="mb-4 h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">Nenhum agendamento</p>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="lg:col-span-3"
+        >
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Faturamento</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {chartPeriod === 'weekly' ? 'Ultimos 7 dias' : 'Este mes'}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {recentAppointments.map((appointment: Appointment) => (
-                  <Link
-                    key={appointment.id}
-                    href={`/dashboard/agendamentos/${appointment.id}`}
-                    className="flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-muted/50"
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 px-1 py-0.5 rounded-lg bg-muted/50">
+                  <button
+                    onClick={() => setChartPeriod('weekly')}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                      chartPeriod === 'weekly' 
+                        ? "bg-primary text-primary-foreground" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">
-                        {appointment.client?.name || 'Cliente'}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {appointment.service?.name || 'Serviço'} - {formatTime(appointment.startTime)}
-                      </p>
-                    </div>
-                    <div className={cn(
-                      "ml-2 h-2 w-2 rounded-full shrink-0",
-                      appointment.status === 'CONFIRMED' && "bg-success",
-                      appointment.status === 'PENDING' && "bg-warning",
-                      appointment.status === 'COMPLETED' && "bg-primary",
-                      appointment.status === 'CANCELLED' && "bg-destructive",
-                    )} />
-                  </Link>
-                ))}
+                    Semana
+                  </button>
+                  <button
+                    onClick={() => setChartPeriod('monthly')}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                      chartPeriod === 'monthly' 
+                        ? "bg-primary text-primary-foreground" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Mes
+                  </button>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} barCategoryGap="20%">
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: '#A1A7B3' }}
+                    />
+                    <YAxis 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: '#A1A7B3' }}
+                      tickFormatter={(value) => `R$${value}`}
+                      width={60}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [formatCurrency(value), 'Receita']}
+                      contentStyle={{
+                        backgroundColor: '#0B1010',
+                        border: '1px solid #1F2428',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                        padding: '12px 16px',
+                      }}
+                      labelStyle={{ color: '#F5F7FA', fontWeight: 600, marginBottom: '4px' }}
+                      itemStyle={{ color: '#22D15A' }}
+                      cursor={{ fill: 'rgba(34, 209, 90, 0.05)' }}
+                    />
+                    <Bar 
+                      dataKey="value" 
+                      fill="#22D15A"
+                      radius={[6, 6, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Recent/Top Products style list */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="lg:col-span-2"
+        >
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50 h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/10">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Proximos Agendamentos</CardTitle>
+                  <p className="text-xs text-muted-foreground">Hoje e proximos dias</p>
+                </div>
+              </div>
+              <Link 
+                href="/dashboard/agendamentos" 
+                className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+              >
+                Ver todos
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {recentAppointments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                    <Calendar className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Nenhum agendamento</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Crie um novo agendamento para comecar</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentAppointments.map((appointment: Appointment, index: number) => (
+                    <motion.div
+                      key={appointment.id}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.6 + index * 0.05 }}
+                    >
+                      <Link
+                        href={`/dashboard/agendamentos/${appointment.id}`}
+                        className="group flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-all"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-sm">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {appointment.client?.name || 'Cliente'}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {appointment.service?.name || 'Servico'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-foreground">
+                            {formatTime(appointment.startTime)}
+                          </p>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <span className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              statusConfig[appointment.status]?.dot || 'bg-slate-500'
+                            )} />
+                            <span className={cn(
+                              "text-[10px] font-medium",
+                              statusConfig[appointment.status]?.text || 'text-slate-500'
+                            )}>
+                              {statusLabels[appointment.status]}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
-      {/* Today's Appointments */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Agendamentos de Hoje</CardTitle>
-          <CardDescription>
-            Acompanhe os agendamentos do dia
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {metrics.todayAppointments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Calendar className="mb-4 h-12 w-12 text-muted-foreground/50" />
-              <p className="text-muted-foreground">Nenhum agendamento para hoje</p>
-              <Button asChild variant="link" className="mt-2">
-                <Link href="/dashboard/agendamentos/novo">Criar agendamento</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {metrics.todayAppointments.map((appointment: Appointment) => (
-                <Link
-                  key={appointment.id}
-                  href={`/dashboard/agendamentos/${appointment.id}`}
-                  className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:border-primary/50"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Clock className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{appointment.client?.name || 'Cliente'}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.service?.name || 'Serviço'} com {appointment.professional?.name || 'Profissional'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="font-medium">
-                        {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatCurrency(appointment.price || 0)}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className={statusColors[appointment.status]}>
-                      {statusLabels[appointment.status]}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md">
-          <Link href="/dashboard/agendamentos">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Calendar className="h-6 w-6" />
+      {/* Today's Timeline */}
+      {metrics.todayAppointments.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Agenda de Hoje</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {format(today, "EEEE, d 'de' MMMM", { locale: ptBR })}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium">Ver Agenda</p>
-                <p className="text-sm text-muted-foreground">Calendário completo</p>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                </span>
+                <span className="text-xs font-medium text-primary">TEMPO REAL</span>
               </div>
-            </CardContent>
-          </Link>
-        </Card>
-
-        <Card className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md">
-          <Link href="/dashboard/clientes/novo">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Users className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Novo Cliente</p>
-                <p className="text-sm text-muted-foreground">Cadastrar cliente</p>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {metrics.todayAppointments
+                  .sort((a: Appointment, b: Appointment) => a.startTime.localeCompare(b.startTime))
+                  .map((appointment: Appointment, index: number) => (
+                    <motion.div
+                      key={appointment.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.8 + index * 0.03 }}
+                    >
+                      <Link
+                        href={`/dashboard/agendamentos/${appointment.id}`}
+                        className={cn(
+                          "group block p-4 rounded-xl border transition-all hover:shadow-md",
+                          statusConfig[appointment.status]?.bg || 'bg-muted/30',
+                          "border-border/50 hover:border-primary/30"
+                        )}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <span className="text-lg font-bold text-foreground">
+                            {formatTime(appointment.startTime)}
+                          </span>
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase",
+                            statusConfig[appointment.status]?.bg,
+                            statusConfig[appointment.status]?.text
+                          )}>
+                            {statusLabels[appointment.status]}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {appointment.client?.name || 'Cliente'}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {appointment.service?.name || 'Servico'}
+                        </p>
+                        {appointment.professional && (
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            com {appointment.professional.name}
+                          </p>
+                        )}
+                      </Link>
+                    </motion.div>
+                  ))}
               </div>
             </CardContent>
-          </Link>
-        </Card>
-
-        <Card className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md">
-          <Link href="/dashboard/servicos">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <DollarSign className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Serviços</p>
-                <p className="text-sm text-muted-foreground">Gerenciar preços</p>
-              </div>
-            </CardContent>
-          </Link>
-        </Card>
-
-        <Card className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md">
-          <Link href="/dashboard/configuracoes">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <TrendingUp className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Configurações</p>
-                <p className="text-sm text-muted-foreground">Horários e mais</p>
-              </div>
-            </CardContent>
-          </Link>
-        </Card>
-      </div>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }
