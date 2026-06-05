@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Plus, Search, Pencil, Trash2, Users, Loader2, AlertCircle, Phone, Mail, CalendarDays } from 'lucide-react';
 import { PhotosTabPlaceholder } from '@/components/dashboard/photos-tab-placeholder';
+import { ClientHistoryDialog } from '@/components/dashboard/client-history-dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -264,6 +265,7 @@ export default function ClientesPage() {
                     <p className="truncate font-medium text-foreground">{client.name}</p>
                   </div>
                   <div className="flex shrink-0 gap-1">
+                    <ClientHistoryDialog client={client} />
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditForm(client)}>
                       <Pencil className="h-4 w-4" />
                       <span className="sr-only">Editar</span>
