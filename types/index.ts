@@ -151,6 +151,41 @@ export interface Notification {
   createdAt: string;
 }
 
+// Confirmação de Agendamento via WhatsApp
+export type ConfirmationFlowMessageType =
+  | 'reservation_created'
+  | 'confirmation_request'
+  | 'confirmation_reminder'
+  | 'confirmation_cancelled'
+  | 'final_reminder';
+
+export interface ConfirmationSettings {
+  /** Habilita o fluxo de confirmação automática. */
+  enabled: boolean;
+  /** Quantas horas antes do atendimento o link é enviado (configurável). */
+  leadTimeHours: number;
+  /** Modelo escolhido para cada etapa (id do modelo em message-templates). */
+  templates: Record<ConfirmationFlowMessageType, string>;
+}
+
+export type PublicConfirmationStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'declined'
+  | 'cancelled'
+  | 'expired'
+  | 'not_found';
+
+export interface PublicConfirmation {
+  status: PublicConfirmationStatus;
+  clientName: string;
+  serviceName: string;
+  professionalName: string;
+  establishmentName: string;
+  date: string;
+  startTime: string;
+}
+
 export interface Subscription {
   id: string;
   status: SubscriptionStatus;

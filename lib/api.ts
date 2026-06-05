@@ -11,6 +11,8 @@ import type {
   Client,
   Appointment,
   Notification,
+  ConfirmationSettings,
+  PublicConfirmation,
   Plan,
   Subscription,
   SlotsResponse,
@@ -457,8 +459,37 @@ export const notificationsApi = {
     apiFetch<void>(`/notifications/${id}`, { method: 'DELETE' }),
 };
 
+// Confirmation Settings API (configuração do fluxo de confirmação no dashboard)
+export const confirmationApi = {
+  // GET /api/confirmation-settings - Lê a config do fluxo de confirmação
+  getSettings: () => apiFetch<ConfirmationSettings>('/confirmation-settings'),
+
+  // PUT /api/confirmation-settings - Salva a config (antecedência + modelos escolhidos)
+  updateSettings: (data: Partial<ConfirmationSettings>) =>
+    apiFetch<ConfirmationSettings>('/confirmation-settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
+
 // Public API (sem autenticação)
 export const publicApi = {
+  // GET /api/public/confirmations/:token - Dados do agendamento para a tela de confirmação
+  getConfirmation: (token: string) =>
+    apiFetch<PublicConfirmation>(`/public/confirmations/${token}`),
+
+  // POST /api/public/confirmations/:token/confirm - Cliente confirma a presença
+  confirmAppointment: (token: string) =>
+    apiFetch<PublicConfirmation>(`/public/confirmations/${token}/confirm`, {
+      method: 'POST',
+    }),
+
+  // POST /api/public/confirmations/:token/decline - Cliente avisa que não vai
+  declineAppointment: (token: string) =>
+    apiFetch<PublicConfirmation>(`/public/confirmations/${token}/decline`, {
+      method: 'POST',
+    }),
+
   getEstablishment: (slug: string) =>
     apiFetch<Establishment & { professionals: Professional[]; services: Service[] }>(
       `/public/establishments/${slug}`

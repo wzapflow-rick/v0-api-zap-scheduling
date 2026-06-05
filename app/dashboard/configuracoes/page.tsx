@@ -14,11 +14,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Building2, Clock, Globe, Copy, Check, AlertCircle, MessageCircle } from 'lucide-react';
+import { Loader2, Building2, Clock, Globe, Copy, Check, AlertCircle, MessageCircle, CalendarCheck } from 'lucide-react';
 import { establishmentApi } from '@/lib/api';
 import type { Establishment } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AutomaticMessages } from '@/components/dashboard/automatic-messages';
+import { ConfirmationSettingsCard } from '@/components/dashboard/confirmation-settings';
 import { ConfiguracoesSkeleton } from '@/components/skeletons/dashboard-skeleton';
 
 // Business hours type - API returns with isOpen/openTime/closeTime but expects enabled/open/close
@@ -265,6 +266,10 @@ export default function ConfiguracoesPage() {
             <MessageCircle className="h-4 w-4" />
             Mensagens Automáticas
           </TabsTrigger>
+          <TabsTrigger value="confirmacao" className="gap-2">
+            <CalendarCheck className="h-4 w-4" />
+            Confirmação
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral">
@@ -411,6 +416,10 @@ export default function ConfiguracoesPage() {
           {establishment?.slug && (
             <AutomaticMessages slug={establishment.slug} />
           )}
+        </TabsContent>
+
+        <TabsContent value="confirmacao">
+          <ConfirmationSettingsCard />
         </TabsContent>
       </Tabs>
     </div>
