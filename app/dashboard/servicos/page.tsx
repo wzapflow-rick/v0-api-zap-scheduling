@@ -10,10 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Search, Pencil, Trash2, Scissors, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Scissors, Loader2, AlertCircle, Clock, Users, Tag } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -235,85 +234,87 @@ export default function ServicosPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {services.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Scissors className="mb-4 h-12 w-12 text-muted-foreground/50" />
-              <p className="text-muted-foreground">Nenhum serviço encontrado</p>
-              <Button variant="link" onClick={openCreateForm}>
-                Cadastrar primeiro serviço
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Serviço</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Duração</TableHead>
-                  <TableHead>Preço</TableHead>
-                  <TableHead>Profissionais</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {services.map((service: Service) => (
-                  <TableRow key={service.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{service.name}</p>
-                        {service.description && (
-                          <p className="max-w-xs truncate text-sm text-muted-foreground">{service.description}</p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{service.category || '-'}</TableCell>
-                    <TableCell>{service.duration} min</TableCell>
-                    <TableCell className="font-medium">{formatCurrency(service.price)}</TableCell>
-                    <TableCell>
-                      {service.professionals?.length || 0} profissional(is)
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={service.active ? 'default' : 'secondary'}>
-                        {service.active ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => openEditForm(service)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remover serviço?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. O serviço será removido permanentemente.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(service.id)}>
-                                Remover
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
       </Card>
+
+      {/* Services grid */}
+      {services.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Scissors className="mb-4 h-12 w-12 text-muted-foreground/50" />
+            <p className="text-muted-foreground">Nenhum serviço encontrado</p>
+            <Button variant="link" onClick={openCreateForm}>
+              Cadastrar primeiro serviço
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {services.map((service: Service) => (
+            <Card key={service.id} className="flex flex-col">
+              <CardContent className="flex flex-1 flex-col gap-4 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="truncate font-medium text-foreground">{service.name}</p>
+                    {service.description && (
+                      <p className="line-clamp-2 text-sm text-muted-foreground">{service.description}</p>
+                    )}
+                  </div>
+                  <Badge variant={service.active ? 'default' : 'secondary'} className="shrink-0">
+                    {service.active ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{service.category || 'Sem categoria'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 shrink-0" />
+                    <span>{service.duration} min</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 shrink-0" />
+                    <span>{service.professionals?.length || 0} profissional(is)</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t pt-3">
+                  <span className="text-lg font-semibold text-foreground">{formatCurrency(service.price)}</span>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditForm(service)}>
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Editar</span>
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <span className="sr-only">Remover</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remover serviço?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. O serviço será removido permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(service.id)}>
+                            Remover
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

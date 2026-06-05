@@ -12,11 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Search, Pencil, Trash2, Briefcase, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Briefcase, Loader2, AlertCircle, Phone, Scissors, CalendarDays } from 'lucide-react';
+import { PhotosTabPlaceholder } from '@/components/dashboard/photos-tab-placeholder';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -237,9 +237,10 @@ export default function ProfissionaisPage() {
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="info">Informações</TabsTrigger>
-                  <TabsTrigger value="horarios">Horários de Trabalho</TabsTrigger>
+                  <TabsTrigger value="horarios">Horários</TabsTrigger>
+                  <TabsTrigger value="fotos">Fotos</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="info" className="space-y-4 mt-4">
@@ -327,6 +328,10 @@ export default function ProfissionaisPage() {
                     Se nenhum dia estiver habilitado, o profissional usará os horários do estabelecimento.
                   </p>
                 </TabsContent>
+
+                <TabsContent value="fotos" className="mt-4">
+                  <PhotosTabPlaceholder subjectLabel="do profissional" />
+                </TabsContent>
               </Tabs>
               
               <Button type="submit" className="w-full" disabled={isLoading}>
@@ -353,90 +358,91 @@ export default function ProfissionaisPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {professionals.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Briefcase className="mb-4 h-12 w-12 text-muted-foreground/50" />
-              <p className="text-muted-foreground">Nenhum profissional encontrado</p>
-              <Button variant="link" onClick={openCreateForm}>
-                Cadastrar primeiro profissional
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Profissional</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Serviços</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Cadastro</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {professionals.map((professional: Professional) => (
-                  <TableRow key={professional.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {getInitials(professional.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{professional.name}</p>
-                          <p className="text-sm text-muted-foreground">{professional.email || '-'}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{professional.phone || '-'}</TableCell>
-                    <TableCell>
-                      {professional.services?.length || 0} serviço(s)
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={professional.active ? 'default' : 'secondary'}>
-                        {professional.active ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(professional.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => openEditForm(professional)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remover profissional?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. O profissional será removido permanentemente.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(professional.id)}>
-                                Remover
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
       </Card>
+
+      {/* Professionals grid */}
+      {professionals.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Briefcase className="mb-4 h-12 w-12 text-muted-foreground/50" />
+            <p className="text-muted-foreground">Nenhum profissional encontrado</p>
+            <Button variant="link" onClick={openCreateForm}>
+              Cadastrar primeiro profissional
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {professionals.map((professional: Professional) => (
+            <Card key={professional.id} className="flex flex-col">
+              <CardContent className="flex flex-1 flex-col gap-4 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar className="h-11 w-11 shrink-0">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {getInitials(professional.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{professional.name}</p>
+                      <p className="truncate text-sm text-muted-foreground">{professional.email || '-'}</p>
+                    </div>
+                  </div>
+                  <Badge variant={professional.active ? 'default' : 'secondary'} className="shrink-0">
+                    {professional.active ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{professional.phone || 'Sem telefone'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Scissors className="h-4 w-4 shrink-0" />
+                    <span>{professional.services?.length || 0} serviço(s)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 shrink-0" />
+                    <span className="truncate">
+                      Desde {format(new Date(professional.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-1 border-t pt-3">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditForm(professional)}>
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Editar</span>
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <span className="sr-only">Remover</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remover profissional?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação não pode ser desfeita. O profissional será removido permanentemente.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(professional.id)}>
+                          Remover
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
