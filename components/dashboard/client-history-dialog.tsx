@@ -4,8 +4,8 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -14,8 +14,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarClock, Loader2, AlertCircle, Clock, Scissors, User } from 'lucide-react';
 import { clientsApi } from '@/lib/api';
+import { offlineAppointmentsApi as appointmentsApi } from '@/lib/offline/api-wrapper';
+import { cn } from '@/lib/utils';
 import type { AppointmentStatus, Client } from '@/types';
 
 const statusLabels: Record<AppointmentStatus, string> = {
@@ -26,13 +29,15 @@ const statusLabels: Record<AppointmentStatus, string> = {
   NO_SHOW: 'Não compareceu',
 };
 
-const statusClasses: Record<AppointmentStatus, string> = {
-  PENDING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-transparent',
-  CONFIRMED: 'bg-primary/10 text-primary border-transparent',
-  COMPLETED: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-transparent',
-  CANCELLED: 'bg-destructive/10 text-destructive border-transparent',
-  NO_SHOW: 'bg-muted text-muted-foreground border-transparent',
+const statusDotClasses: Record<AppointmentStatus, string> = {
+  PENDING: 'bg-amber-500',
+  CONFIRMED: 'bg-primary',
+  COMPLETED: 'bg-emerald-500',
+  CANCELLED: 'bg-destructive',
+  NO_SHOW: 'bg-muted-foreground',
 };
+
+const statusOrder: AppointmentStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -41,14 +46,24 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+// Converte timestamp ISO ("1970-01-01T14:30:00.000Z") ou "HH:mm" para "HH:mm"
+function formatTime(time: string) {
+  if (!time) return '';
+  if (time.includes('T')) {
+    return time.split('T')[1].substring(0, 5);
+  }
+  return time;
+}
+
 interface ClientHistoryDialogProps {
   client: Client;
 }
 
 export function ClientHistoryDialog({ client }: ClientHistoryDialogProps) {
   const [open, setOpen] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     open ? ['client-history', client.id] : null,
     async () => {
       const res = await clientsApi.history(client.id);
@@ -60,6 +75,23 @@ export function ClientHistoryDialog({ client }: ClientHistoryDialogProps) {
 
   const appointments = data?.appointments ?? [];
   const stats = data?.stats;
+
+  const handleStatusChange = async (appointmentId: string, newStatus: string) => {
+    setUpdatingId(appointmentId);
+    try {
+      const result = await appointmentsApi.updateStatus(appointmentId, newStatus);
+      if (result.success) {
+        toast.success('Status atualizado!');
+        await mutate();
+      } else {
+        toast.error(result.error || 'Erro ao atualizar status');
+      }
+    } catch {
+      toast.error('Erro ao atualizar status');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -115,7 +147,7 @@ export function ClientHistoryDialog({ client }: ClientHistoryDialogProps) {
                 {appointments.map((appointment) => (
                   <div key={appointment.id} className="rounded-lg border bg-card p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
+                      <div className="min-w-0 space-y-1.5">
                         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                           <Scissors className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">{appointment.service?.name || 'Serviço'}</span>
@@ -127,19 +159,44 @@ export function ClientHistoryDialog({ client }: ClientHistoryDialogProps) {
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="h-4 w-4 shrink-0" />
                           <span>
-                            {format(new Date(appointment.date), "dd/MM/yyyy", { locale: ptBR })} às{' '}
-                            {appointment.startTime}
+                            {format(new Date(appointment.date), 'dd/MM/yyyy', { locale: ptBR })} às{' '}
+                            {formatTime(appointment.startTime)}
                           </span>
                         </div>
                       </div>
-                      <div className="flex shrink-0 flex-col items-end gap-2">
-                        <Badge className={statusClasses[appointment.status]}>
-                          {statusLabels[appointment.status]}
-                        </Badge>
-                        <span className="text-sm font-medium text-foreground">
-                          {formatCurrency(appointment.price)}
-                        </span>
-                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-foreground">
+                        {formatCurrency(appointment.price)}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3">
+                      <span className="text-xs text-muted-foreground">Status</span>
+                      <Select
+                        value={appointment.status}
+                        onValueChange={(value) => handleStatusChange(appointment.id, value)}
+                        disabled={updatingId === appointment.id}
+                      >
+                        <SelectTrigger className="h-8 w-[170px]">
+                          {updatingId === appointment.id ? (
+                            <span className="flex items-center gap-2 text-sm">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Atualizando...
+                            </span>
+                          ) : (
+                            <SelectValue />
+                          )}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statusOrder.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              <span className="flex items-center gap-2">
+                                <span className={cn('h-2 w-2 rounded-full', statusDotClasses[status])} />
+                                {statusLabels[status]}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 ))}
