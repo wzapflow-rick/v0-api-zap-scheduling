@@ -45,6 +45,22 @@ function extractDataArray<T>(entities: OfflineEntity<T>[]): T[] {
   return entities.map((e) => e.data);
 }
 
+// O backend pode retornar tanto um array direto quanto um objeto paginado
+// (ex.: { services: [...], pagination: {...} }). Esta funcao extrai o array
+// com seguranca APENAS para fins de cache, sem alterar o formato original
+// que e retornado para a pagina. Sem isso, um `for...of` sobre um objeto
+// paginado lanca "not iterable" e quebra o carregamento.
+function toEntityArray<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    for (const key of ['appointments', 'clients', 'professionals', 'services', 'items', 'data']) {
+      if (Array.isArray(obj[key])) return obj[key] as T[];
+    }
+  }
+  return [];
+}
+
 // ==================== Appointments API Wrapper ====================
 
 export const offlineAppointmentsApi = {
@@ -61,8 +77,8 @@ export const offlineAppointmentsApi = {
     if (!shouldUseOffline()) {
       const result = await appointmentsApi.list(params);
       if (result.success && result.data) {
-        // Cache results
-        for (const appointment of result.data) {
+        // Cache results (extrai array com seguranca; resposta pode ser paginada)
+        for (const appointment of toEntityArray<Appointment>(result.data)) {
           await saveEntity('appointments', appointment, 'synced');
         }
         return result;
@@ -258,7 +274,7 @@ export const offlineClientsApi = {
     if (!shouldUseOffline()) {
       const result = await clientsApi.list(params);
       if (result.success && result.data) {
-        for (const client of result.data) {
+        for (const client of toEntityArray<Client>(result.data)) {
           await saveEntity('clients', client, 'synced');
         }
         return result;
@@ -383,7 +399,7 @@ export const offlineProfessionalsApi = {
     if (!shouldUseOffline()) {
       const result = await professionalsApi.list(params);
       if (result.success && result.data) {
-        for (const professional of result.data) {
+        for (const professional of toEntityArray<Professional>(result.data)) {
           await saveEntity('professionals', professional, 'synced');
         }
         return result;
@@ -511,7 +527,7 @@ export const offlineServicesApi = {
     if (!shouldUseOffline()) {
       const result = await servicesApi.list(params);
       if (result.success && result.data) {
-        for (const service of result.data) {
+        for (const service of toEntityArray<Service>(result.data)) {
           await saveEntity('services', service, 'synced');
         }
         return result;
