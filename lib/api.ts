@@ -10,6 +10,7 @@ import type {
   Service,
   Client,
   Appointment,
+  Notification,
   Plan,
   Subscription,
   SlotsResponse,
@@ -424,6 +425,36 @@ export const automaticMessagesApi = {
       pagination: { page: number; limit: number; total: number };
     }>(`/automatic-messages/logs?${searchParams}`);
   },
+};
+
+// Notifications API
+export const notificationsApi = {
+  // GET /api/notifications - List notifications + unread count
+  list: (params?: { page?: number; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return apiFetch<{ notifications: Notification[]; unreadCount: number }>(
+      `/notifications${query ? `?${query}` : ''}`
+    );
+  },
+
+  // GET /api/notifications/unread-count - Unread count only
+  getUnreadCount: () =>
+    apiFetch<{ count: number }>('/notifications/unread-count'),
+
+  // PUT /api/notifications/:id/read - Mark one as read
+  markAsRead: (id: string) =>
+    apiFetch<void>(`/notifications/${id}/read`, { method: 'PUT' }),
+
+  // PUT /api/notifications/read-all - Mark all as read
+  markAllAsRead: () =>
+    apiFetch<void>('/notifications/read-all', { method: 'PUT' }),
+
+  // DELETE /api/notifications/:id - Delete one
+  delete: (id: string) =>
+    apiFetch<void>(`/notifications/${id}`, { method: 'DELETE' }),
 };
 
 // Public API (sem autenticação)

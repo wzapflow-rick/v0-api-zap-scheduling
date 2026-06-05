@@ -133,6 +133,24 @@ export interface Appointment {
   createdAt: string;
 }
 
+export type NotificationType =
+  | 'appointment_created'
+  | 'appointment_cancelled'
+  | 'client_created'
+  | 'whatsapp_disconnected'
+  | 'appointment_reminder'
+  | 'appointment_no_show';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface Subscription {
   id: string;
   status: SubscriptionStatus;

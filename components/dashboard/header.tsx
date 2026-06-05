@@ -11,11 +11,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Bell, LogOut, Settings, User, ExternalLink, Menu } from 'lucide-react';
+import { LogOut, Settings, User, ExternalLink, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ConnectionStatus } from '@/components/connection-status';
 import { SyncQueuePanel } from '@/components/sync-queue-panel';
+import { NotificationsDropdown } from '@/components/dashboard/notifications-dropdown';
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -78,12 +79,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
         <ThemeToggle />
         
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative h-9 w-9">
-          <Bell className="h-4 w-4" />
-          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-            3
-          </span>
-        </Button>
+        <NotificationsDropdown />
 
         {/* User Menu */}
         <DropdownMenu>

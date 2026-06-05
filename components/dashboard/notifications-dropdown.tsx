@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, Check, Trash2, Calendar, UserPlus, XCircle, MessageSquareOff, Loader2 } from 'lucide-react';
+import { Bell, Check, Trash2, Calendar, UserPlus, XCircle, MessageSquareOff, Loader2, Clock, CalendarX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,25 +10,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { notificationsApi } from '@/lib/api';
+import type { Notification } from '@/types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  data?: Record<string, unknown>;
-  read: boolean;
-  createdAt: string;
-}
 
 const notificationIcons: Record<string, typeof Calendar> = {
   appointment_created: Calendar,
   appointment_cancelled: XCircle,
   client_created: UserPlus,
   whatsapp_disconnected: MessageSquareOff,
+  appointment_reminder: Clock,
+  appointment_no_show: CalendarX,
 };
 
 const notificationColors: Record<string, string> = {
@@ -36,6 +29,8 @@ const notificationColors: Record<string, string> = {
   appointment_cancelled: 'text-red-500',
   client_created: 'text-blue-500',
   whatsapp_disconnected: 'text-amber-500',
+  appointment_reminder: 'text-amber-500',
+  appointment_no_show: 'text-red-500',
 };
 
 export function NotificationsDropdown() {
