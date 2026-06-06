@@ -129,6 +129,25 @@ async function handle(req: NextRequest) {
 
     const payload = data as { data?: { items?: PendingWorkItem[] }; items?: PendingWorkItem[] } | null;
     items = (payload?.data?.items || payload?.items || []) as PendingWorkItem[];
+
+    // Modo diagnóstico: ?debug=1 mostra o que o backend devolveu, sem enviar nada.
+    if (req.nextUrl.searchParams.get('debug') === '1') {
+      return NextResponse.json({
+        success: true,
+        debug: true,
+        backendStatus: res.status,
+        // resposta crua do backend, exatamente como veio
+        backendResponse: data,
+        // onde o cron encontrou (ou não) os itens
+        itemsFound: items.length,
+        items,
+        // a chave esperada caso esteja vazio
+        hint:
+          items.length === 0
+            ? 'O backend nao retornou itens em data.items nem em items. Verifique se o due-actions esta considerando o agendamento (status pending, token gerado, enabled=true, janela de horas e fuso).'
+            : undefined,
+      });
+    }
   } catch (error) {
     console.error('[cron/confirmations] erro ao buscar trabalho pendente', error);
     return NextResponse.json(
