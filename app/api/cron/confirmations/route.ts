@@ -14,21 +14,47 @@ const API_BASE_URL = 'https://api.agenda.wzapflow.com.br/api';
 // Ação que o backend pede para o cron executar -> tipo de mensagem do catálogo
 const ACTION_TO_MESSAGE_TYPE: Record<string, ConfirmationMessageType> = {
   send_reservation: 'reservation_created',
-  send_link: 'confirmation_request',
-  send_reminder: 'confirmation_reminder',
-  cancel: 'confirmation_cancelled',
+  send_confirmation_request: 'confirmation_request',
+  send_confirmation_reminder: 'confirmation_reminder',
+  cancel_no_confirmation: 'confirmation_cancelled',
   send_final_reminder: 'final_reminder',
 };
 
+// Aceita o formato achatado do backend (clientName, serviceName, ...)
+// e também um eventual objeto `vars` aninhado, por robustez.
 interface PendingWorkItem {
   appointmentId: string;
-  action: keyof typeof ACTION_TO_MESSAGE_TYPE;
-  slug: string;
+  action: string;
+  // identificação da instância Evolution
+  establishmentSlug?: string;
+  slug?: string;
   instanceName?: string;
-  clientPhone: string;
+  // contato
+  clientPhone?: string;
+  // seleção de modelo + token do link
   templateId?: string;
   confirmationToken?: string;
-  vars: TemplateVariables;
+  // campos achatados (contrato do backend)
+  clientName?: string;
+  serviceName?: string;
+  professionalName?: string;
+  establishmentName?: string;
+  date?: string;
+  startTime?: string;
+  // formato alternativo (aninhado)
+  vars?: TemplateVariables;
+}
+
+// Monta as variáveis do modelo a partir do item, cobrindo ambos os formatos.
+function extractVars(item: PendingWorkItem): TemplateVariables {
+  return {
+    cliente: item.vars?.cliente ?? item.clientName,
+    servico: item.vars?.servico ?? item.serviceName,
+    profissional: item.vars?.profissional ?? item.professionalName,
+    data: item.vars?.data ?? item.date,
+    hora: item.vars?.hora ?? item.startTime,
+    estabelecimento: item.vars?.estabelecimento ?? item.establishmentName,
+  };
 }
 
 interface ProcessedResult {
@@ -68,21 +94,41 @@ async function handle(req: NextRequest) {
   // 2. Busca o trabalho pendente no backend (autenticação serviço-a-serviço)
   let items: PendingWorkItem[] = [];
   try {
-    const res = await fetch(`${API_BASE_URL}/confirmations/pending-work`, {
+    const res = await fetch(`${API_BASE_URL}/service/confirmations/due-actions`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${serviceToken}`,
       },
     });
-    const data = await res.json();
-    if (!res.ok) {
+
+    // Lê como texto primeiro para não quebrar se o backend responder HTML (404/erro)
+    const raw = await res.text();
+    let data: unknown = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      const snippet = raw.slice(0, 120).replace(/\s+/g, ' ');
+      console.error('[cron/confirmations] resposta não-JSON do backend', res.status, snippet);
       return NextResponse.json(
-        { success: false, error: data?.error || 'Erro ao buscar trabalho pendente' },
+        {
+          success: false,
+          error: `Backend respondeu ${res.status} sem JSON (verifique a URL /service/confirmations/due-actions e o CONFIRMATION_SERVICE_TOKEN). Início: ${snippet}`,
+        },
         { status: 502 }
       );
     }
-    items = (data?.data?.items || data?.items || []) as PendingWorkItem[];
+
+    if (!res.ok) {
+      const errObj = data as { error?: string } | null;
+      return NextResponse.json(
+        { success: false, error: errObj?.error || `Erro ${res.status} ao buscar trabalho pendente` },
+        { status: 502 }
+      );
+    }
+
+    const payload = data as { data?: { items?: PendingWorkItem[] }; items?: PendingWorkItem[] } | null;
+    items = (payload?.data?.items || payload?.items || []) as PendingWorkItem[];
   } catch (error) {
     console.error('[cron/confirmations] erro ao buscar trabalho pendente', error);
     return NextResponse.json(
@@ -107,14 +153,15 @@ async function handle(req: NextRequest) {
     }
 
     try {
-      const vars: TemplateVariables = { ...item.vars };
+      const vars: TemplateVariables = extractVars(item);
       if (item.confirmationToken) {
         vars.link_confirmacao = buildConfirmationLink(req, item.confirmationToken);
       }
 
+      const slug = item.establishmentSlug || item.slug || '';
       const body = renderTemplate(resolveTemplateBody(messageType, item.templateId), vars);
-      const instanceName = item.instanceName || `ZapFlow-Agenda_${item.slug}`;
-      const phone = formatPhoneForWhatsApp(item.clientPhone);
+      const instanceName = item.instanceName || `ZapFlow-Agenda_${slug}`;
+      const phone = formatPhoneForWhatsApp(item.clientPhone || '');
 
       const sendResult = await evolutionApi.sendTextMessage(instanceName, phone, body);
 
@@ -137,7 +184,7 @@ async function handle(req: NextRequest) {
   // 4. Reporta os resultados ao backend (que atualiza timestamps/status de forma idempotente)
   if (results.length > 0) {
     try {
-      await fetch(`${API_BASE_URL}/confirmations/processed`, {
+      await fetch(`${API_BASE_URL}/service/confirmations/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
