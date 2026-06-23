@@ -3,10 +3,16 @@ import { render, screen } from '@testing-library/react';
 import { BusinessLabel } from '@/components/business/business-label';
 import { BusinessGuard } from '@/components/business/business-guard';
 
-// auth-context é usado indiretamente pelo provider; aqui os componentes
-// caem no DEFAULT_BUSINESS_CONFIG (sem provider) — features ativas, labels genéricas.
+// auth-context é usado indiretamente; sem provider os componentes caem no
+// DEFAULT_BUSINESS_CONFIG (nicho OTHER) — labels genéricas.
 vi.mock('@/lib/auth-context', () => ({
   useAuth: () => ({ user: null }),
+}));
+
+// Controla o acesso a módulos no BusinessGuard de forma determinística.
+const canAccessMock = vi.fn();
+vi.mock('@/hooks/use-module-access', () => ({
+  useModuleAccess: () => ({ canAccess: canAccessMock }),
 }));
 
 describe('BusinessLabel', () => {
@@ -22,7 +28,8 @@ describe('BusinessLabel', () => {
 });
 
 describe('BusinessGuard', () => {
-  it('renderiza o conteúdo quando a feature está habilitada (default)', () => {
+  it('renderiza o conteúdo quando a feature está habilitada', () => {
+    canAccessMock.mockReturnValue(true);
     render(
       <BusinessGuard feature="products">
         <p>Conteúdo do módulo</p>
@@ -32,13 +39,23 @@ describe('BusinessGuard', () => {
   });
 
   it('usa o fallback informado quando sem acesso', () => {
-    // Não há como desabilitar via default aqui; validamos o branch de fallback
-    // diretamente garantindo que children aparecem quando permitido.
+    canAccessMock.mockReturnValue(false);
     render(
       <BusinessGuard feature="workouts" fallback={<p>Sem acesso</p>}>
         <p>Treinos</p>
       </BusinessGuard>
     );
-    expect(screen.getByText('Treinos')).toBeInTheDocument();
+    expect(screen.getByText('Sem acesso')).toBeInTheDocument();
+    expect(screen.queryByText('Treinos')).not.toBeInTheDocument();
+  });
+
+  it('renderiza AccessDenied por padrão quando sem acesso e sem fallback', () => {
+    canAccessMock.mockReturnValue(false);
+    render(
+      <BusinessGuard feature="medicalRecords">
+        <p>Prontuários</p>
+      </BusinessGuard>
+    );
+    expect(screen.queryByText('Prontuários')).not.toBeInTheDocument();
   });
 });

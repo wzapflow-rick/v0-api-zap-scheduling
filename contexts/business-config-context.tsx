@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { businessTypesApi } from '@/lib/api';
 import type { BusinessConfig, BusinessTypeId } from '@/types';
 import {
-  DEFAULT_BUSINESS_CONFIG,
+  getStaticBusinessConfig,
   CURRENT_CONFIG_VERSION,
   normalizeBusinessConfig,
 } from '@/lib/business-config-defaults';
@@ -68,14 +68,19 @@ export function BusinessConfigProvider({ children }: { children: ReactNode }) {
   const businessType: BusinessTypeId = user?.establishment?.businessType ?? 'OTHER';
 
   const fetcher = useCallback(async ([, type]: [string, BusinessTypeId]) => {
-    const res = await businessTypesApi.getConfig(type);
-    if (!res.success || !res.data) {
-      // Fallback seguro mantendo o id do nicho
-      return { ...DEFAULT_BUSINESS_CONFIG, id: type };
+    try {
+      const res = await businessTypesApi.getConfig(type);
+      if (!res.success || !res.data) {
+        // Backend ainda não fornece a config: usa a config estática do nicho
+        return getStaticBusinessConfig(type);
+      }
+      const normalized = normalizeBusinessConfig(res.data, type);
+      writeCache(type, normalized);
+      return normalized;
+    } catch {
+      // Erro de rede / endpoint inexistente: cai na config estática do nicho
+      return getStaticBusinessConfig(type);
     }
-    const normalized = normalizeBusinessConfig(res.data, type);
-    writeCache(type, normalized);
-    return normalized;
   }, []);
 
   const { data, isLoading, mutate } = useSWR<BusinessConfig>(
@@ -84,7 +89,7 @@ export function BusinessConfigProvider({ children }: { children: ReactNode }) {
     {
       revalidateOnFocus: false,
       // Hidrata instantaneamente com o cache persistente (abre rápido no refresh)
-      fallbackData: readCache(businessType) ?? { ...DEFAULT_BUSINESS_CONFIG, id: businessType },
+      fallbackData: readCache(businessType) ?? getStaticBusinessConfig(businessType),
     }
   );
 
@@ -97,7 +102,7 @@ export function BusinessConfigProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<BusinessConfigContextValue>(
     () => ({
-      config: data ?? { ...DEFAULT_BUSINESS_CONFIG, id: businessType },
+      config: data ?? getStaticBusinessConfig(businessType),
       isLoading,
       refreshBusinessConfig,
     }),

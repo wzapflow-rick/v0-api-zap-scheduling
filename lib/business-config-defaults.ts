@@ -26,7 +26,7 @@ const GENERIC_LABELS: BusinessLabels = {
 
 const feature = (enabled: boolean, version = 1): FeatureConfig => ({ enabled, version });
 
-/** Capabilities padrão (tudo desligado, exceto o que for seguro). */
+/** Capabilities padrão (tudo desligado). */
 const DEFAULT_CAPABILITIES: BusinessCapabilities = {
   inventory: false,
   memberships: false,
@@ -43,24 +43,108 @@ const DEFAULT_DASHBOARD_CARDS: DashboardCardConfig[] = [
   { id: DashboardCardId.PROFESSIONALS, enabled: true, order: 3 },
 ];
 
+/** Helper para montar labels a partir de overrides parciais. */
+function makeLabels(over: Partial<BusinessLabels>): BusinessLabels {
+  return { ...GENERIC_LABELS, ...over };
+}
+
 /**
- * Fallback seguro: todas as features principais ATIVAS e labels genéricas,
- * para que nada suma quando o backend ainda não retorna a config.
+ * Mapa ESTÁTICO de configuração por nicho — fonte de verdade no código
+ * (sem dependência de banco). Define labels, módulos e capabilities de cada
+ * segmento. Só os módulos relevantes ao nicho ficam ativos.
  */
-export const DEFAULT_BUSINESS_CONFIG: BusinessConfig = {
-  version: CURRENT_CONFIG_VERSION,
-  id: 'OTHER',
-  label: 'Negócio',
-  labels: GENERIC_LABELS,
-  features: {
-    products: feature(true),
-    workouts: feature(true),
-    medicalRecords: feature(true),
-    memberships: feature(true),
+export const BUSINESS_CONFIGS: Record<BusinessTypeId, BusinessConfig> = {
+  BARBERSHOP: {
+    version: CURRENT_CONFIG_VERSION,
+    id: 'BARBERSHOP',
+    label: 'Barbearia',
+    labels: makeLabels({
+      professional: { singular: 'Barbeiro', plural: 'Barbeiros' },
+    }),
+    features: {
+      products: feature(true),
+      workouts: feature(false),
+      medicalRecords: feature(false),
+      memberships: feature(false),
+    },
+    capabilities: { ...DEFAULT_CAPABILITIES, inventory: true, commissions: true },
+    dashboardCards: DEFAULT_DASHBOARD_CARDS,
   },
-  capabilities: { ...DEFAULT_CAPABILITIES },
-  dashboardCards: DEFAULT_DASHBOARD_CARDS,
+  SALON: {
+    version: CURRENT_CONFIG_VERSION,
+    id: 'SALON',
+    label: 'Salão de Beleza',
+    labels: makeLabels({}),
+    features: {
+      products: feature(true),
+      workouts: feature(false),
+      medicalRecords: feature(false),
+      memberships: feature(false),
+    },
+    capabilities: { ...DEFAULT_CAPABILITIES, inventory: true, commissions: true },
+    dashboardCards: DEFAULT_DASHBOARD_CARDS,
+  },
+  PERSONAL_TRAINER: {
+    version: CURRENT_CONFIG_VERSION,
+    id: 'PERSONAL_TRAINER',
+    label: 'Personal Trainer',
+    labels: makeLabels({
+      client: { singular: 'Aluno', plural: 'Alunos' },
+      professional: { singular: 'Personal', plural: 'Personais' },
+      appointment: { singular: 'Sessão', plural: 'Sessões' },
+    }),
+    features: {
+      products: feature(false),
+      workouts: feature(true),
+      medicalRecords: feature(false),
+      memberships: feature(true),
+    },
+    capabilities: { ...DEFAULT_CAPABILITIES, workouts: true, memberships: true },
+    dashboardCards: DEFAULT_DASHBOARD_CARDS,
+  },
+  CLINIC: {
+    version: CURRENT_CONFIG_VERSION,
+    id: 'CLINIC',
+    label: 'Clínica',
+    labels: makeLabels({
+      client: { singular: 'Paciente', plural: 'Pacientes' },
+      appointment: { singular: 'Consulta', plural: 'Consultas' },
+    }),
+    features: {
+      products: feature(false),
+      workouts: feature(false),
+      medicalRecords: feature(true),
+      memberships: feature(false),
+    },
+    capabilities: { ...DEFAULT_CAPABILITIES, medicalRecords: true },
+    dashboardCards: DEFAULT_DASHBOARD_CARDS,
+  },
+  OTHER: {
+    version: CURRENT_CONFIG_VERSION,
+    id: 'OTHER',
+    label: 'Negócio',
+    labels: GENERIC_LABELS,
+    features: {
+      products: feature(false),
+      workouts: feature(false),
+      medicalRecords: feature(false),
+      memberships: feature(false),
+    },
+    capabilities: { ...DEFAULT_CAPABILITIES },
+    dashboardCards: DEFAULT_DASHBOARD_CARDS,
+  },
 };
+
+/**
+ * Config padrão/baseline = nicho OTHER (genérico, só módulos essenciais).
+ * Usado quando não há tipo definido.
+ */
+export const DEFAULT_BUSINESS_CONFIG: BusinessConfig = BUSINESS_CONFIGS.OTHER;
+
+/** Retorna a config estática do nicho (cai em OTHER se desconhecido). */
+export function getStaticBusinessConfig(type?: BusinessTypeId): BusinessConfig {
+  return (type && BUSINESS_CONFIGS[type]) || BUSINESS_CONFIGS.OTHER;
+}
 
 /** Aceita feature legada como boolean OU objeto e normaliza para FeatureConfig. */
 function normalizeFeature(value: unknown, fallback: FeatureConfig): FeatureConfig {
@@ -116,11 +200,12 @@ export function normalizeBusinessConfig(
   raw: unknown,
   typeId?: BusinessTypeId
 ): BusinessConfig {
+  const base = getStaticBusinessConfig(typeId);
   if (!raw || typeof raw !== 'object') {
-    return { ...DEFAULT_BUSINESS_CONFIG, id: typeId ?? 'OTHER' };
+    return { ...base, id: typeId ?? base.id };
   }
   const r = raw as Record<string, any>;
-  const fallbackFeatures = DEFAULT_BUSINESS_CONFIG.features;
+  const fallbackFeatures = base.features;
   const rawFeatures = (r.features ?? {}) as Record<string, unknown>;
 
   const features: BusinessFeatures = {
@@ -131,23 +216,23 @@ export function normalizeBusinessConfig(
   };
 
   const capabilities: BusinessCapabilities = {
-    ...DEFAULT_CAPABILITIES,
+    ...base.capabilities,
     ...(r.capabilities && typeof r.capabilities === 'object' ? r.capabilities : {}),
   };
 
   const dashboardCards: DashboardCardConfig[] = Array.isArray(r.dashboardCards)
     ? (r.dashboardCards as DashboardCardConfig[])
-    : DEFAULT_DASHBOARD_CARDS;
+    : base.dashboardCards;
 
   return {
     version: typeof r.version === 'number' ? r.version : 1,
-    id: (r.id as BusinessTypeId) ?? typeId ?? 'OTHER',
-    label: typeof r.label === 'string' ? r.label : DEFAULT_BUSINESS_CONFIG.label,
-    labels: normalizeLabels(r.labels),
+    id: (r.id as BusinessTypeId) ?? typeId ?? base.id,
+    label: typeof r.label === 'string' ? r.label : base.label,
+    labels: r.labels ? normalizeLabels(r.labels) : base.labels,
     features,
     capabilities,
     dashboardCards,
-    theme: r.theme && typeof r.theme === 'object' ? r.theme : undefined,
+    theme: r.theme && typeof r.theme === 'object' ? r.theme : base.theme,
   };
 }
 
