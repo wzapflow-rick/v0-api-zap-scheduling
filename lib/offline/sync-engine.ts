@@ -261,13 +261,16 @@ async function processProfessionalSync(
   entityId: string,
   data: Partial<Professional>
 ): Promise<{ success: boolean; data?: Professional; status?: number; error?: string }> {
+  // Envia só o vínculo via serviceIds; remove arrays de exibição/ids locais
+  const { services: _services, id: _id, ...payload } = data as Professional & { id?: string };
+
   switch (operationType) {
     case 'create':
-      const createResult = await professionalsApi.create(data);
+      const createResult = await professionalsApi.create(payload);
       return { success: createResult.success, data: createResult.data, status: createResult.status, error: createResult.error };
 
     case 'update':
-      const updateResult = await professionalsApi.update(entityId, data);
+      const updateResult = await professionalsApi.update(entityId, payload);
       return { success: updateResult.success, data: updateResult.data, status: updateResult.status, error: updateResult.error };
 
     case 'delete':
@@ -288,13 +291,16 @@ async function processServiceSync(
   entityId: string,
   data: Partial<Service>
 ): Promise<{ success: boolean; data?: Service; status?: number; error?: string }> {
+  // Envia só o vínculo via professionalIds; remove arrays de exibição/ids locais
+  const { professionals: _professionals, id: _id, ...payload } = data as Service & { id?: string };
+
   switch (operationType) {
     case 'create':
-      const createResult = await servicesApi.create(data);
+      const createResult = await servicesApi.create(payload);
       return { success: createResult.success, data: createResult.data, status: createResult.status, error: createResult.error };
 
     case 'update':
-      const updateResult = await servicesApi.update(entityId, data);
+      const updateResult = await servicesApi.update(entityId, payload);
       return { success: updateResult.success, data: updateResult.data, status: updateResult.status, error: updateResult.error };
 
     case 'delete':

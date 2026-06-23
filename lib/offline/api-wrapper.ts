@@ -462,6 +462,9 @@ export const offlineProfessionalsApi = {
       active: data.active ?? true,
       workingHours: data.workingHours,
       createdAt: new Date().toISOString(),
+      // Preserva o vínculo M:N (lista completa) para a fila de sync e p/ a UI offline
+      serviceIds: data.serviceIds ?? [],
+      services: (data.serviceIds ?? []).map((id) => ({ service: { id } as Service })),
     };
 
     await saveEntity('professionals', professional, 'pending');
@@ -482,7 +485,11 @@ export const offlineProfessionalsApi = {
 
     const cached = await getEntity<Professional>('professionals', id);
     if (cached) {
-      const updated = { ...cached.data, ...data };
+      const updated: Professional = { ...cached.data, ...data };
+      // Se o vínculo M:N veio no update, reflete na lista para a UI offline
+      if (data.serviceIds) {
+        updated.services = data.serviceIds.map((sid) => ({ service: { id: sid } as Service }));
+      }
       await saveEntity('professionals', updated, 'pending');
       await addToSyncQueue('professional', 'update', id, updated);
       forceSync();
@@ -592,6 +599,9 @@ export const offlineServicesApi = {
       duration: data.duration || 30,
       category: data.category,
       active: data.active ?? true,
+      // Preserva o vínculo M:N (lista completa) para a fila de sync e p/ a UI offline
+      professionalIds: data.professionalIds ?? [],
+      professionals: (data.professionalIds ?? []).map((id) => ({ professional: { id } as Professional })),
     };
 
     await saveEntity('services', service, 'pending');
@@ -612,7 +622,11 @@ export const offlineServicesApi = {
 
     const cached = await getEntity<Service>('services', id);
     if (cached) {
-      const updated = { ...cached.data, ...data };
+      const updated: Service = { ...cached.data, ...data };
+      // Se o vínculo M:N veio no update, reflete na lista para a UI offline
+      if (data.professionalIds) {
+        updated.professionals = data.professionalIds.map((pid) => ({ professional: { id: pid } as Professional }));
+      }
       await saveEntity('services', updated, 'pending');
       await addToSyncQueue('service', 'update', id, updated);
       forceSync();
