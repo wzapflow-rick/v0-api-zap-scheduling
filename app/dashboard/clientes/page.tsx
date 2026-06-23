@@ -25,6 +25,7 @@ import type { Client } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ClientesSkeleton } from '@/components/skeletons/dashboard-skeleton';
 import { useBusiness } from '@/hooks/use-business';
+import { useDebounce } from '@/hooks/use-debounce';
 
 const clientSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -50,6 +51,8 @@ const clientsFetcher = async (key: [string, string]) => {
 
 export default function ClientesPage() {
   const [search, setSearch] = useState('');
+  // Só dispara a busca após a digitação estabilizar (evita refetch a cada tecla)
+  const debouncedSearch = useDebounce(search, 350);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,12 +60,13 @@ export default function ClientesPage() {
   const clientSingular = getBusinessLabel('client');
   const clientPlural = getBusinessLabel('client', { plural: true });
 
-  const { data: clientsData, error, isLoading: isLoadingData, mutate } = useSWR(
-    ['clients', search],
+  const { data: clientsData, error, isLoading: isLoadingData, isValidating, mutate } = useSWR(
+    ['clients', debouncedSearch],
     clientsFetcher,
     {
       revalidateOnFocus: false,
       shouldRetryOnError: false,
+      keepPreviousData: true,
     }
   );
 
@@ -77,8 +81,8 @@ export default function ClientesPage() {
     resolver: zodResolver(clientSchema),
   });
 
-  // Show loading state
-  if (isLoadingData) {
+  // Skeleton só na carga inicial (sem dados ainda); buscas reaproveitam a lista
+  if (isLoadingData && !clientsData) {
     return <ClientesSkeleton />;
   }
 
@@ -236,8 +240,11 @@ export default function ClientesPage() {
                 placeholder="Buscar por nome, e-mail ou telefone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 pr-10"
               />
+              {isValidating && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
             </div>
           </div>
         </CardHeader>
