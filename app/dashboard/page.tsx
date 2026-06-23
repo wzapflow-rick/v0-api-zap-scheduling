@@ -27,6 +27,7 @@ import { DashboardSkeleton } from '@/components/skeletons/dashboard-skeleton';
 import { motion } from 'motion/react';
 import { useBusiness } from '@/hooks/use-business';
 import { CardRenderer } from '@/components/dashboard/card-renderer';
+import { selectVisibleCards } from '@/components/dashboard/dashboard-card-registry';
 import type { DashboardMetrics } from '@/components/dashboard/dashboard-card-registry';
 
 // Status config
@@ -366,9 +367,7 @@ export default function DashboardPage() {
     professionalPlural: getBusinessLabel('professional', { plural: true }),
   };
   // Filtra habilitados e ordena por `order` (sem ids hardcoded)
-  const visibleCards = [...config.dashboardCards]
-    .filter((c) => c.enabled)
-    .sort((a, b) => a.order - b.order);
+  const visibleCards = selectVisibleCards(config.dashboardCards);
 
   return (
     <div className="space-y-8">

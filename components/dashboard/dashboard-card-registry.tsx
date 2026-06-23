@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { motion } from 'motion/react';
 import { DashboardCardId } from '@/types';
+import type { DashboardCardConfig } from '@/types';
 
 /** Dados compartilhados que os cards do dashboard consomem. */
 export interface DashboardMetrics {
@@ -160,3 +161,15 @@ export const DashboardCardRegistry: Record<DashboardCardId, ComponentType<Dashbo
   [DashboardCardId.CLIENTS]: ClientsCard,
   [DashboardCardId.PROFESSIONALS]: ProfessionalsCard,
 };
+
+/**
+ * Seleciona os cards habilitados, ordenados por `order`, ignorando ids
+ * desconhecidos (que não existem no registry). Função pura e testável.
+ */
+export function selectVisibleCards(
+  cards: DashboardCardConfig[]
+): DashboardCardConfig[] {
+  return cards
+    .filter((c) => c.enabled && c.id in DashboardCardRegistry)
+    .sort((a, b) => a.order - b.order);
+}

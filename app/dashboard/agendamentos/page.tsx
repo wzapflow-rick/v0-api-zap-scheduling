@@ -206,8 +206,8 @@ export default function AgendamentosPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Agendamentos</h1>
-          <p className="text-muted-foreground">Gerencie seus agendamentos</p>
+          <h1 className="text-2xl font-bold text-foreground">{appointmentPlural}</h1>
+          <p className="text-muted-foreground">Gerencie seus {appointmentPlural.toLowerCase()}</p>
         </div>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>

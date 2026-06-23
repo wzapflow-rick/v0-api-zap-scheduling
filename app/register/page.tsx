@@ -10,10 +10,20 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Check, X, Eye, EyeOff, Mail, Lock, User, Phone, Building2, ArrowRight } from 'lucide-react';
+import { Loader2, Check, X, Eye, EyeOff, Mail, Lock, User, Phone, Building2, ArrowRight, Scissors, Sparkles, Dumbbell, Stethoscope, Store } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getPasswordRequirements, getPasswordStrength, isPasswordValid, passwordSchema } from '@/lib/validators';
 import { cn } from '@/lib/utils';
+import { analytics, AnalyticsEvent } from '@/lib/analytics';
+import type { BusinessTypeId } from '@/types';
+
+const businessTypeOptions: { id: BusinessTypeId; label: string; icon: React.ElementType }[] = [
+  { id: 'BARBERSHOP', label: 'Barbearia', icon: Scissors },
+  { id: 'SALON', label: 'Salão de Beleza', icon: Sparkles },
+  { id: 'PERSONAL_TRAINER', label: 'Personal Trainer', icon: Dumbbell },
+  { id: 'CLINIC', label: 'Clínica', icon: Stethoscope },
+  { id: 'OTHER', label: 'Outro', icon: Store },
+];
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -42,6 +52,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [businessType, setBusinessType] = useState<BusinessTypeId>('BARBERSHOP');
   const router = useRouter();
   const { register: registerUser } = useAuth();
 
@@ -92,9 +103,11 @@ export default function RegisterPage() {
         phone: data.phone,
         password: data.password,
         establishmentName: data.establishmentName,
+        businessType,
       });
       
       if (result.success) {
+        analytics.track(AnalyticsEvent.BUSINESS_TYPE_SELECTED, { businessType });
         toast.success('Conta criada com sucesso!');
         router.push('/dashboard');
       } else {
@@ -250,6 +263,38 @@ export default function RegisterPage() {
             {errors.establishmentName.message}
           </p>
         )}
+
+        {/* Business Type Selector */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-foreground">
+            Qual é o seu negócio?
+          </Label>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {businessTypeOptions.map((option) => {
+              const Icon = option.icon;
+              const selected = businessType === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setBusinessType(option.id)}
+                  disabled={isLoading || isLocked}
+                  aria-pressed={selected}
+                  className={cn(
+                    'flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 text-center transition-all',
+                    'hover:border-emerald-500/50 disabled:opacity-50',
+                    selected
+                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500'
+                      : 'border-border bg-muted/50 text-muted-foreground'
+                  )}
+                >
+                  <Icon className="h-6 w-6" />
+                  <span className="text-xs font-medium leading-tight text-balance">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Password Field */}
         <div className="space-y-2">

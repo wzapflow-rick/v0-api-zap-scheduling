@@ -20,6 +20,7 @@ import { offlineServicesApi as servicesApi } from '@/lib/offline/api-wrapper';
 import type { Service } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ServicosSkeleton } from '@/components/skeletons/dashboard-skeleton';
+import { useBusiness } from '@/hooks/use-business';
 
 const serviceSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -49,7 +50,10 @@ export default function ServicosPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
+  const { getBusinessLabel } = useBusiness();
+  const serviceSingular = getBusinessLabel('service');
+  const servicePlural = getBusinessLabel('service', { plural: true });
+  
   const { data: servicesData, error, isLoading: isLoadingData, mutate } = useSWR(
     ['services', search],
     servicesFetcher,
@@ -155,14 +159,14 @@ export default function ServicosPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Serviços</h1>
-          <p className="text-muted-foreground">Gerencie seus serviços e preços</p>
+          <h1 className="text-2xl font-bold text-foreground">{servicePlural}</h1>
+          <p className="text-muted-foreground">Gerencie seus {servicePlural.toLowerCase()} e preços</p>
         </div>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
             <Button onClick={openCreateForm}>
               <Plus className="mr-2 h-4 w-4" />
-              Novo Serviço
+              Novo {serviceSingular}
             </Button>
           </DialogTrigger>
           <DialogContent>
