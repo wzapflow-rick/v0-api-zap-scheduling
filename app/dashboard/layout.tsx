@@ -9,6 +9,7 @@ import { OfflineBanner } from '@/components/connection-status';
 import { Loader2 } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { AutoMessagesProvider } from '@/contexts/auto-messages-context';
+import { BusinessConfigProvider } from '@/contexts/business-config-context';
 import { SubscriptionGuard } from '@/components/subscription-guard';
 import { SidebarProvider, useSidebar } from '@/contexts/sidebar-context';
 import { cn } from '@/lib/utils';
@@ -76,11 +77,13 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <AutoMessagesProvider slug={slug}>
-        <div className="min-h-screen bg-background">
-          <DashboardContent>{children}</DashboardContent>
-        </div>
-      </AutoMessagesProvider>
+      <BusinessConfigProvider>
+        <AutoMessagesProvider slug={slug}>
+          <div className="min-h-screen bg-background">
+            <DashboardContent>{children}</DashboardContent>
+          </div>
+        </AutoMessagesProvider>
+      </BusinessConfigProvider>
     </SidebarProvider>
   );
 }

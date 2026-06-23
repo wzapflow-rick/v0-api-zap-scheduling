@@ -12,40 +12,24 @@ import {
   ChevronLeft,
   CreditCard,
   ChevronRight,
+  Package,
+  Dumbbell,
+  ClipboardList,
+  Star,
+  type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/contexts/sidebar-context';
+import { useBusiness } from '@/hooks/use-business';
+import { useModuleAccess } from '@/hooks/use-module-access';
 import { motion, AnimatePresence } from 'motion/react';
-import Image from 'next/image';
 
-const navItems = [
-  {
-    href: '/dashboard',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    exact: true,
-  },
-  {
-    href: '/dashboard/agendamentos',
-    label: 'Agendamentos',
-    icon: Calendar,
-  },
-  {
-    href: '/dashboard/clientes',
-    label: 'Clientes',
-    icon: Users,
-  },
-  {
-    href: '/dashboard/profissionais',
-    label: 'Profissionais',
-    icon: Briefcase,
-  },
-  {
-    href: '/dashboard/servicos',
-    label: 'Servicos',
-    icon: Scissors,
-  },
-];
+interface NavItemData {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+}
 
 const adminItems = [
   {
@@ -68,7 +52,7 @@ function NavItem({
   onClick,
   index 
 }: { 
-  item: typeof navItems[0]; 
+  item: NavItemData; 
   isActive: boolean; 
   isOpen: boolean; 
   onClick?: () => void;
@@ -149,6 +133,31 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
   const pathname = usePathname();
   const { collapsed, toggleCollapsed } = useSidebar();
   const isOpen = !collapsed;
+  const { getBusinessLabel } = useBusiness();
+  const { canAccess } = useModuleAccess();
+
+  // Itens base — sempre visíveis, com labels adaptadas ao nicho
+  const navItems: NavItemData[] = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+    { href: '/dashboard/agendamentos', label: getBusinessLabel('appointment', { plural: true }), icon: Calendar },
+    { href: '/dashboard/clientes', label: getBusinessLabel('client', { plural: true }), icon: Users },
+    { href: '/dashboard/profissionais', label: getBusinessLabel('professional', { plural: true }), icon: Briefcase },
+    { href: '/dashboard/servicos', label: getBusinessLabel('service', { plural: true }), icon: Scissors },
+  ];
+
+  // Itens condicionais — aparecem conforme o módulo liberado pelo nicho
+  if (canAccess('products')) {
+    navItems.push({ href: '/dashboard/produtos', label: 'Produtos', icon: Package });
+  }
+  if (canAccess('workouts')) {
+    navItems.push({ href: '/dashboard/treinos', label: 'Treinos', icon: Dumbbell });
+  }
+  if (canAccess('medicalRecords')) {
+    navItems.push({ href: '/dashboard/prontuarios', label: 'Prontuários', icon: ClipboardList });
+  }
+  if (canAccess('memberships')) {
+    navItems.push({ href: '/dashboard/planos', label: 'Planos', icon: Star });
+  }
 
   return (
     <aside

@@ -13,6 +13,9 @@ import type {
   Notification,
   ConfirmationSettings,
   PublicConfirmation,
+  BusinessTypeSummary,
+  BusinessConfig,
+  BusinessTypeId,
   Plan,
   Subscription,
   SlotsResponse,
@@ -457,6 +460,16 @@ export const notificationsApi = {
   // DELETE /api/notifications/:id - Delete one
   delete: (id: string) =>
     apiFetch<void>(`/notifications/${id}`, { method: 'DELETE' }),
+};
+
+// Business Types API (nichos / UI adaptativa)
+export const businessTypesApi = {
+  // GET /api/business-types - Lista de nichos para o onboarding
+  list: () => apiFetch<BusinessTypeSummary[]>('/business-types'),
+
+  // GET /api/business-types/:type - Config completa de um nicho
+  getConfig: (type: BusinessTypeId) =>
+    apiFetch<BusinessConfig>(`/business-types/${type}`),
 };
 
 // Confirmation Settings API (configuração do fluxo de confirmação no dashboard)

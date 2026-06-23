@@ -21,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/lib/auth-context';
 import { useAutoMessagesConfig } from '@/contexts/auto-messages-context';
 import { AgendamentosSkeleton } from '@/components/skeletons/dashboard-skeleton';
+import { useBusiness } from '@/hooks/use-business';
 
 const statusColors: Record<AppointmentStatus, string> = {
   PENDING: 'bg-warning text-warning-foreground',
@@ -81,6 +82,8 @@ const professionalsFetcher = async () => {
 
 export default function AgendamentosPage() {
   const { user } = useAuth();
+  const { getBusinessLabel } = useBusiness();
+  const appointmentPlural = getBusinessLabel('appointment', { plural: true });
   const { instanceName: configInstanceName } = useAutoMessagesConfig();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);

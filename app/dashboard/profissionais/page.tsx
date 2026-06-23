@@ -33,6 +33,7 @@ import {
   localToApiWorkingHours 
 } from '@/components/dashboard/working-hours';
 import { ProfissionaisSkeleton } from '@/components/skeletons/dashboard-skeleton';
+import { useBusiness } from '@/hooks/use-business';
 
 const professionalSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -70,6 +71,8 @@ export default function ProfissionaisPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { getBusinessLabel } = useBusiness();
+  const professionalPlural = getBusinessLabel('professional', { plural: true });
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [workingHours, setWorkingHours] = useState<WorkingHoursLocal>({ ...defaultWorkingHours });
 
@@ -218,7 +221,7 @@ export default function ProfissionaisPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Profissionais</h1>
+          <h1 className="text-2xl font-bold text-foreground">{professionalPlural}</h1>
           <p className="text-muted-foreground">Gerencie sua equipe</p>
         </div>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

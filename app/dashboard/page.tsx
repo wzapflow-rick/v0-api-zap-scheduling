@@ -10,8 +10,6 @@ import { Button } from '@/components/ui/button';
 import { 
   Calendar, 
   Plus, 
-  DollarSign,
-  Users,
   TrendingUp,
   Clock,
   ArrowUpRight,
@@ -27,6 +25,9 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recha
 import { toast } from 'sonner';
 import { DashboardSkeleton } from '@/components/skeletons/dashboard-skeleton';
 import { motion } from 'motion/react';
+import { useBusiness } from '@/hooks/use-business';
+import { CardRenderer } from '@/components/dashboard/card-renderer';
+import type { DashboardMetrics } from '@/components/dashboard/dashboard-card-registry';
 
 // Status config
 const statusConfig: Record<AppointmentStatus, { bg: string; text: string; dot: string }> = {
@@ -163,6 +164,7 @@ export default function DashboardPage() {
   const [chartPeriod, setChartPeriod] = useState<'weekly' | 'monthly'>('weekly');
   const searchParams = useSearchParams();
   const paymentStatus = searchParams.get('payment');
+  const { config, getBusinessLabel } = useBusiness();
   
   useEffect(() => {
     if (paymentStatus === 'success') {
@@ -350,6 +352,24 @@ export default function DashboardPage() {
     return time;
   };
 
+  // Métricas e labels para os cards dinâmicos (registry)
+  const dashboardMetrics: DashboardMetrics = {
+    monthlyRevenue: metrics.monthlyRevenue,
+    revenueChange: metrics.revenueChange,
+    totalAppointments: metrics.totalAppointments,
+    newClientsCount: metrics.newClientsCount,
+    professionalsCount: establishment?._count?.professionals ?? 0,
+  };
+  const cardLabels = {
+    appointmentPlural: getBusinessLabel('appointment', { plural: true }),
+    clientPlural: getBusinessLabel('client', { plural: true }),
+    professionalPlural: getBusinessLabel('professional', { plural: true }),
+  };
+  // Filtra habilitados e ordena por `order` (sem ids hardcoded)
+  const visibleCards = [...config.dashboardCards]
+    .filter((c) => c.enabled)
+    .sort((a, b) => a.order - b.order);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -376,46 +396,36 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid — cards principais dirigidos pela config do nicho (registry) */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Faturamento Bruto"
-          value={formatCurrency(metrics.monthlyRevenue)}
-          icon={DollarSign}
-          iconBg="bg-emerald-500/10"
-          iconColor="text-emerald-500"
-          trend={{ value: metrics.revenueChange, positive: metrics.revenueChange >= 0 }}
-          showRealTime
-          delay={0}
-        />
-        <StatCard
-          title="Total de Agendamentos"
-          value={metrics.totalAppointments}
-          subtitle="este mes"
-          icon={Calendar}
-          iconBg="bg-blue-500/10"
-          iconColor="text-blue-500"
-          showRealTime
-          delay={0.1}
-        />
+        {visibleCards.map((card, i) => (
+          <CardRenderer
+            key={card.id}
+            card={card}
+            metrics={dashboardMetrics}
+            labels={cardLabels}
+            index={i}
+          />
+        ))}
+        {/* Cards complementares fixos */}
         <StatCard
           title="Ticket Medio"
           value={formatCurrency(metrics.avgTicket)}
-          subtitle={`${metrics.completedCount} servicos`}
+          subtitle={`${metrics.completedCount} ${cardLabels.appointmentPlural.toLowerCase()}`}
           icon={TrendingUp}
           iconBg="bg-purple-500/10"
           iconColor="text-purple-500"
-          delay={0.2}
+          delay={0.4}
         />
         <StatCard
-          title="Agendamentos Pendentes"
+          title={`${cardLabels.appointmentPlural} Pendentes`}
           value={metrics.pendingToday}
           subtitle="hoje"
           icon={Zap}
           iconBg="bg-primary/20"
           iconColor="text-primary"
           highlight
-          delay={0.3}
+          delay={0.5}
         />
       </div>
 

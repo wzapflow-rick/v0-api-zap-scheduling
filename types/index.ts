@@ -66,6 +66,7 @@ export interface Establishment {
   timezone: string;
   slotDuration: number;
   workingHours: WorkingHours;
+  businessType?: BusinessTypeId;
   _count?: {
     professionals: number;
     services: number;
@@ -184,6 +185,92 @@ export interface PublicConfirmation {
   establishmentName: string;
   date: string;
   startTime: string;
+}
+
+// ============================================================
+// Business Types (Nichos) — camada de UI adaptativa
+// ============================================================
+
+export type BusinessTypeId =
+  | 'BARBERSHOP'
+  | 'SALON'
+  | 'PERSONAL_TRAINER'
+  | 'CLINIC'
+  | 'OTHER';
+
+/** Item retornado por GET /business-types (lista para onboarding). */
+export interface BusinessTypeSummary {
+  id: BusinessTypeId;
+  label: string;
+  description?: string;
+  icon?: string;
+}
+
+export type BusinessLabelKey = 'client' | 'professional' | 'appointment' | 'service';
+
+/** Cada label tem singular e plural explícitos (i18n-ready, sem pluralização manual). */
+export type BusinessLabels = Record<BusinessLabelKey, { singular: string; plural: string }> & {
+  dashboardTitle: string;
+};
+
+/** Configuração de um módulo principal, com versão e metadata opcional. */
+export interface FeatureConfig {
+  enabled: boolean;
+  version: number;
+  metadata?: {
+    beta?: boolean;
+    experimental?: boolean;
+  };
+}
+
+/** Módulos principais (telas/áreas). */
+export interface BusinessFeatures {
+  memberships: FeatureConfig;
+  workouts: FeatureConfig;
+  medicalRecords: FeatureConfig;
+  products: FeatureConfig;
+}
+
+/** Sub-recursos granulares — escala sem multiplicar flags de módulo. */
+export interface BusinessCapabilities {
+  inventory: boolean;
+  memberships: boolean;
+  workouts: boolean;
+  medicalRecords: boolean;
+  commissions: boolean;
+  onlineCatalog: boolean;
+}
+
+export enum DashboardCardId {
+  APPOINTMENTS = 'appointments',
+  REVENUE = 'revenue',
+  CLIENTS = 'clients',
+  PROFESSIONALS = 'professionals',
+}
+
+export interface DashboardCardConfig {
+  id: DashboardCardId;
+  enabled: boolean;
+  order: number;
+}
+
+/** Tema visual por nicho — apenas estrutura nesta fase (não aplicado ainda). */
+export interface BusinessTheme {
+  primaryColor?: string;
+  secondaryColor?: string;
+  icon?: string;
+  illustration?: string;
+}
+
+export interface BusinessConfig {
+  version: number;
+  id: BusinessTypeId;
+  label: string;
+  labels: BusinessLabels;
+  features: BusinessFeatures;
+  capabilities: BusinessCapabilities;
+  dashboardCards: DashboardCardConfig[];
+  theme?: BusinessTheme;
 }
 
 export interface Subscription {
@@ -314,4 +401,5 @@ export interface RegisterRequest {
   password: string;
   phone: string;
   establishmentName: string;
+  businessType?: BusinessTypeId;
 }
