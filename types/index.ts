@@ -94,6 +94,8 @@ export interface Professional {
   workingHours?: WorkingHours;
   services?: { service: Service }[];
   createdAt: string;
+  /** Write-only: lista completa de serviços vinculados (enviada no create/update). */
+  serviceIds?: string[];
 }
 
 export interface Service {
@@ -105,6 +107,8 @@ export interface Service {
   category?: string;
   active: boolean;
   professionals?: { professional: Professional }[];
+  /** Write-only: lista completa de profissionais vinculados (enviada no create/update). */
+  professionalIds?: string[];
 }
 
 export interface Client {

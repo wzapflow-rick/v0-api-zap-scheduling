@@ -167,6 +167,8 @@ export default function ProfissionaisPage() {
         active: data.active,
         // Only send working hours if at least one day is enabled
         workingHours: hasCustomWorkingHours ? localToApiWorkingHours(workingHours) : undefined,
+        // Lista COMPLETA de serviços vinculados (muitos-para-muitos, substitui o conjunto)
+        serviceIds: selectedServices,
       };
 
       const result = editingProfessional
@@ -174,13 +176,6 @@ export default function ProfissionaisPage() {
         : await professionalsApi.create(professionalData);
 
       if (result.success) {
-        // Assign services to professional if any selected
-        if (selectedServices.length > 0 && result.data?.id) {
-          for (const serviceId of selectedServices) {
-            await servicesApi.assignProfessionals(serviceId, [result.data.id]);
-          }
-        }
-
         toast.success(editingProfessional ? 'Profissional atualizado!' : 'Profissional cadastrado!');
         setIsFormOpen(false);
         mutate();

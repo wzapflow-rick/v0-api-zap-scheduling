@@ -16,9 +16,10 @@ import { Plus, Search, Pencil, Trash2, Scissors, Loader2, AlertCircle, Clock, Us
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { offlineServicesApi as servicesApi } from '@/lib/offline/api-wrapper';
-import type { Service } from '@/types';
+import { offlineServicesApi as servicesApi, offlineProfessionalsApi as professionalsApi } from '@/lib/offline/api-wrapper';
+import type { Service, Professional } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ServicosSkeleton } from '@/components/skeletons/dashboard-skeleton';
 import { useBusiness } from '@/hooks/use-business';
 
@@ -45,6 +46,18 @@ const servicesFetcher = async (key: [string, string]) => {
   return Array.isArray(services) ? services : [];
 };
 
+// Carrega profissionais ativos para o vínculo serviço → profissional
+const professionalsFetcher = async () => {
+  const res = await professionalsApi.list({ limit: 100, active: true });
+  if (!res.success) {
+    return [];
+  }
+  // O backend retorna { professionals: [...] } ou diretamente o array
+  const payload = res.data as unknown as { professionals?: Professional[] } | Professional[] | undefined;
+  const professionals = Array.isArray(payload) ? payload : payload?.professionals || [];
+  return Array.isArray(professionals) ? professionals : [];
+};
+
 export default function ServicosPage() {
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -53,7 +66,9 @@ export default function ServicosPage() {
   const { getBusinessLabel } = useBusiness();
   const serviceSingular = getBusinessLabel('service');
   const servicePlural = getBusinessLabel('service', { plural: true });
-  
+  const professionalPlural = getBusinessLabel('professional', { plural: true });
+  const [selectedProfessionals, setSelectedProfessionals] = useState<string[]>([]);
+
   const { data: servicesData, error, isLoading: isLoadingData, mutate } = useSWR(
     ['services', search],
     servicesFetcher,
@@ -63,7 +78,12 @@ export default function ServicosPage() {
     }
   );
 
+  const { data: professionalsData } = useSWR('professionals-for-services', professionalsFetcher, {
+    revalidateOnFocus: false,
+  });
+
   const services = Array.isArray(servicesData) ? servicesData : [];
+  const availableProfessionals = Array.isArray(professionalsData) ? professionalsData : [];
 
   const {
     register,
@@ -100,6 +120,7 @@ export default function ServicosPage() {
   const openCreateForm = () => {
     setEditingService(null);
     reset({ name: '', description: '', price: 0, duration: 30, category: '', active: true });
+    setSelectedProfessionals([]);
     setIsFormOpen(true);
   };
 
@@ -113,15 +134,18 @@ export default function ServicosPage() {
       category: service.category || '',
       active: service.active,
     });
+    setSelectedProfessionals(service.professionals?.map((p) => p.professional.id) || []);
     setIsFormOpen(true);
   };
 
   const onSubmit = async (data: ServiceFormData) => {
     setIsLoading(true);
     try {
+      // Envia a lista COMPLETA de profissionais vinculados (substitui o conjunto)
+      const payload = { ...data, professionalIds: selectedProfessionals };
       const result = editingService
-        ? await servicesApi.update(editingService.id, data)
-        : await servicesApi.create(data);
+        ? await servicesApi.update(editingService.id, payload)
+        : await servicesApi.create(payload);
 
       if (result.success) {
         toast.success(editingService ? 'Serviço atualizado!' : 'Serviço cadastrado!');
@@ -202,6 +226,38 @@ export default function ServicosPage() {
                 <Label htmlFor="category">Categoria</Label>
                 <Input id="category" placeholder="Cabelo, Barba, Estética..." {...register('category')} disabled={isLoading} />
               </div>
+              {availableProfessionals.length > 0 && (
+                <div className="space-y-2">
+                  <Label>{`${professionalPlural} que realizam este ${serviceSingular.toLowerCase()}`}</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto rounded-lg border p-3">
+                    {availableProfessionals.map((professional: Professional) => (
+                      <div key={professional.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`professional-${professional.id}`}
+                          checked={selectedProfessionals.includes(professional.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedProfessionals([...selectedProfessionals, professional.id]);
+                            } else {
+                              setSelectedProfessionals(selectedProfessionals.filter((id) => id !== professional.id));
+                            }
+                          }}
+                          disabled={isLoading}
+                        />
+                        <label
+                          htmlFor={`professional-${professional.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {professional.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Selecione um ou mais. Você pode marcar vários ao mesmo tempo.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <Label htmlFor="active">Ativo</Label>
