@@ -19,7 +19,7 @@ import type { BusinessTypeId } from '@/types';
 
 const businessTypeOptions: { id: BusinessTypeId; label: string; icon: React.ElementType }[] = [
   { id: 'BARBERSHOP', label: 'Barbearia', icon: Scissors },
-  { id: 'SALON', label: 'Salão de Beleza', icon: Sparkles },
+  { id: 'BEAUTY_SALON', label: 'Salão de Beleza', icon: Sparkles },
   { id: 'PERSONAL_TRAINER', label: 'Personal Trainer', icon: Dumbbell },
   { id: 'CLINIC', label: 'Clínica', icon: Stethoscope },
   { id: 'OTHER', label: 'Outro', icon: Store },

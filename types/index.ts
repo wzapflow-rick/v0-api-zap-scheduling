@@ -197,7 +197,7 @@ export interface PublicConfirmation {
 
 export type BusinessTypeId =
   | 'BARBERSHOP'
-  | 'SALON'
+  | 'BEAUTY_SALON'
   | 'PERSONAL_TRAINER'
   | 'CLINIC'
   | 'OTHER';
@@ -275,6 +275,26 @@ export interface BusinessConfig {
   capabilities: BusinessCapabilities;
   dashboardCards: DashboardCardConfig[];
   theme?: BusinessTheme;
+}
+
+/**
+ * Shape CRU retornado por GET /business-types/:type (dentro de `data.config`).
+ * O backend usa labels como strings simples, `business.features` como array de
+ * strings e cards com ids próprios. A função normalizeBusinessConfig converte
+ * isto para o BusinessConfig garantido do frontend.
+ */
+export interface RawBusinessConfig {
+  id: BusinessTypeId;
+  label: string;
+  ui?: {
+    labels?: Partial<Record<BusinessLabelKey | 'dashboardTitle', string>>;
+    dashboardCards?: { id: string; enabled: boolean; order: number }[];
+  };
+  business?: {
+    defaultServices?: { name: string; duration: number }[];
+    features?: string[];
+  };
+  whatsappTemplates?: Record<string, string>;
 }
 
 export interface Subscription {

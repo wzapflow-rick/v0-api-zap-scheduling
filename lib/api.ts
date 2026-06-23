@@ -14,7 +14,7 @@ import type {
   ConfirmationSettings,
   PublicConfirmation,
   BusinessTypeSummary,
-  BusinessConfig,
+  RawBusinessConfig,
   BusinessTypeId,
   Plan,
   Subscription,
@@ -463,13 +463,17 @@ export const notificationsApi = {
 };
 
 // Business Types API (nichos / UI adaptativa)
+// O backend aninha a resposta: { data: { businessTypes: [...] } } e
+// { data: { config: {...} } }. Mantemos os tipos de wrapper fiéis ao backend
+// e o desempacotamento fica a cargo de quem consome (provider/onboarding).
 export const businessTypesApi = {
   // GET /api/business-types - Lista de nichos para o onboarding
-  list: () => apiFetch<BusinessTypeSummary[]>('/business-types'),
+  list: () =>
+    apiFetch<{ businessTypes: BusinessTypeSummary[] }>('/business-types'),
 
-  // GET /api/business-types/:type - Config completa de um nicho
+  // GET /api/business-types/:type - Config completa de um nicho (shape cru do backend)
   getConfig: (type: BusinessTypeId) =>
-    apiFetch<BusinessConfig>(`/business-types/${type}`),
+    apiFetch<{ config: RawBusinessConfig }>(`/business-types/${type}`),
 };
 
 // Confirmation Settings API (configuração do fluxo de confirmação no dashboard)

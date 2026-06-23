@@ -70,11 +70,11 @@ export function BusinessConfigProvider({ children }: { children: ReactNode }) {
   const fetcher = useCallback(async ([, type]: [string, BusinessTypeId]) => {
     try {
       const res = await businessTypesApi.getConfig(type);
-      if (!res.success || !res.data) {
-        // Backend ainda não fornece a config: usa a config estática do nicho
+      // Backend aninha em data.config; sem isso, usa a config estática do nicho
+      if (!res.success || !res.data?.config) {
         return getStaticBusinessConfig(type);
       }
-      const normalized = normalizeBusinessConfig(res.data, type);
+      const normalized = normalizeBusinessConfig(res.data.config, type);
       writeCache(type, normalized);
       return normalized;
     } catch {

@@ -6,7 +6,7 @@ import {
   CURRENT_CONFIG_VERSION,
 } from '@/lib/business-config-defaults';
 
-describe('normalizeBusinessConfig', () => {
+describe('normalizeBusinessConfig (shape real do backend)', () => {
   it('usa a config estática do nicho quando a entrada é inválida', () => {
     const config = normalizeBusinessConfig(null, 'CLINIC');
     expect(config.id).toBe('CLINIC');
@@ -16,51 +16,67 @@ describe('normalizeBusinessConfig', () => {
     expect(config.labels.client.singular).toBe('Paciente');
   });
 
-  it('converte feature booleana legada em FeatureConfig', () => {
-    const config = normalizeBusinessConfig({
-      features: { products: false, workouts: true },
-    });
-    expect(config.features.products).toEqual({ enabled: false, version: 1 });
-    expect(config.features.workouts).toEqual({ enabled: true, version: 1 });
+  it('liga features a partir do array business.features[] do backend', () => {
+    const config = normalizeBusinessConfig(
+      { id: 'PERSONAL_TRAINER', business: { features: ['memberships', 'workouts'] } },
+      'PERSONAL_TRAINER'
+    );
+    expect(config.features.workouts.enabled).toBe(true);
+    expect(config.features.memberships.enabled).toBe(true);
+    expect(config.features.products.enabled).toBe(false);
   });
 
-  it('preserva version e metadata de uma feature em formato objeto', () => {
-    const config = normalizeBusinessConfig({
-      features: {
-        workouts: { enabled: true, version: 2, metadata: { beta: true } },
+  it('aceita token medical-records (com hífen) do backend', () => {
+    const config = normalizeBusinessConfig(
+      { id: 'CLINIC', business: { features: ['medical-records'] } },
+      'CLINIC'
+    );
+    expect(config.features.medicalRecords.enabled).toBe(true);
+  });
+
+  it('array de features vazio desliga todos os módulos especiais', () => {
+    const config = normalizeBusinessConfig(
+      { id: 'OTHER', business: { features: [] } },
+      'OTHER'
+    );
+    expect(config.features.products.enabled).toBe(false);
+    expect(config.features.workouts.enabled).toBe(false);
+    expect(config.features.medicalRecords.enabled).toBe(false);
+    expect(config.features.memberships.enabled).toBe(false);
+  });
+
+  it('converte ui.labels (strings) em singular/plural, mantendo plural do nicho', () => {
+    const config = normalizeBusinessConfig(
+      {
+        id: 'PERSONAL_TRAINER',
+        ui: {
+          labels: { client: 'Aluno', appointment: 'Sessão', dashboardTitle: 'Painel do Personal' },
+        },
       },
-    });
-    expect(config.features.workouts.version).toBe(2);
-    expect(config.features.workouts.metadata).toEqual({ beta: true });
+      'PERSONAL_TRAINER'
+    );
+    // Singular do backend + plural preservado da config estática (Alunos / Sessões)
+    expect(config.labels.client).toEqual({ singular: 'Aluno', plural: 'Alunos' });
+    expect(config.labels.appointment).toEqual({ singular: 'Sessão', plural: 'Sessões' });
+    expect(config.labels.dashboardTitle).toBe('Painel do Personal');
   });
 
-  it('aceita label como string simples e expande para singular/plural', () => {
-    const config = normalizeBusinessConfig({
-      labels: { client: 'Aluno' },
-    });
-    expect(config.labels.client).toEqual({ singular: 'Aluno', plural: 'Aluno' });
+  it('deriva plural com "s" para uma label nova vinda do backend', () => {
+    const config = normalizeBusinessConfig(
+      { id: 'OTHER', ui: { labels: { service: 'Procedimento' } } },
+      'OTHER'
+    );
+    expect(config.labels.service).toEqual({ singular: 'Procedimento', plural: 'Procedimentos' });
   });
 
-  it('aceita label como objeto com singular/plural', () => {
-    const config = normalizeBusinessConfig({
-      labels: { client: { singular: 'Paciente', plural: 'Pacientes' } },
-    });
-    expect(config.labels.client).toEqual({ singular: 'Paciente', plural: 'Pacientes' });
-  });
-
-  it('aplica defaults para version e capabilities ausentes', () => {
-    const config = normalizeBusinessConfig({ id: 'SALON' });
-    expect(config.version).toBe(1);
-    expect(config.capabilities.inventory).toBe(false);
-    expect(config.dashboardCards.length).toBeGreaterThan(0);
-  });
-
-  it('mantém capabilities informadas e completa o resto com default', () => {
-    const config = normalizeBusinessConfig({
-      capabilities: { inventory: true },
-    });
+  it('mantém capabilities e dashboardCards do nicho estático (não vêm do backend)', () => {
+    const config = normalizeBusinessConfig(
+      { id: 'BARBERSHOP', business: { features: ['products'] } },
+      'BARBERSHOP'
+    );
     expect(config.capabilities.inventory).toBe(true);
-    expect(config.capabilities.commissions).toBe(false);
+    expect(config.capabilities.commissions).toBe(true);
+    expect(config.dashboardCards.length).toBeGreaterThan(0);
   });
 });
 
