@@ -138,7 +138,7 @@ export function formatPhoneForWhatsApp(phone: string): string {
 
 // Send message with debug toast
 export async function sendMessageWithDebug(params: {
-  messageType: string;
+  messageType: MessageTemplate['trigger'];
   instanceName: string;
   appointmentData: AppointmentData;
   showDebugToast?: boolean;
@@ -178,6 +178,11 @@ export async function sendMessageWithDebug(params: {
           description: result.error || 'Erro desconhecido',
         });
       }
+    } else if (!result.success) {
+      // Falha real fora do modo debug: avisa o usuário em vez de falhar em silêncio
+      toast.error('Não foi possível enviar a mensagem no WhatsApp', {
+        description: result.error || 'Verifique a conexão do WhatsApp e tente novamente.',
+      });
     }
     
     return result;
@@ -194,13 +199,13 @@ export async function sendMessageWithDebug(params: {
   }
 }
 
-// Map appointment status to message type
-export function getMessageTypeForStatus(status: string): string | null {
-  const statusMap: Record<string, string> = {
-    'CONFIRMED': 'confirmed',  // Mensagem de confirmação pelo estabelecimento
-    'CANCELLED': 'cancellation',
-    'NO_SHOW': 'no_show',
-    'COMPLETED': 'thank_you',
+// Map appointment status to message type (deve casar com MessageTemplate['trigger'])
+export function getMessageTypeForStatus(status: string): MessageTemplate['trigger'] | null {
+  const statusMap: Record<string, MessageTemplate['trigger']> = {
+    'CONFIRMED': 'confirmation', // Confirmação do agendamento
+    'CANCELLED': 'cancelled',    // Cancelamento
+    'COMPLETED': 'completed',    // Agradecimento pós-atendimento
+    // NO_SHOW não possui template dedicado — nenhuma mensagem é enviada
   };
   return statusMap[status] || null;
 }
