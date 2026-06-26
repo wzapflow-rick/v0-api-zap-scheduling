@@ -66,6 +66,7 @@ export function AutomaticMessages({ slug }: AutomaticMessagesProps) {
       {/* WhatsApp Connection */}
       <WhatsAppConnection
         slug={slug}
+        backendConnected={whatsappConnected}
         onConnectionChange={handleConnectionChange}
       />
 

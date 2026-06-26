@@ -10,6 +10,8 @@ import { automaticMessagesApi } from '@/lib/api';
 
 interface WhatsAppConnectionProps {
   slug: string;
+  /** Flag persistido no backend: se ESTE estabelecimento já conectou o WhatsApp. */
+  backendConnected?: boolean;
   onConnectionChange?: (connected: boolean) => void;
 }
 
@@ -28,12 +30,13 @@ interface QRCodeData {
   pairingCode?: string;
 }
 
-export function WhatsAppConnection({ slug, onConnectionChange }: WhatsAppConnectionProps) {
+export function WhatsAppConnection({ slug, backendConnected = false, onConnectionChange }: WhatsAppConnectionProps) {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [qrCode, setQrCode] = useState<QRCodeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  // Marca que este estabelecimento confirmou a conexão (via backend ou nesta sessão)
   const [savedToBackend, setSavedToBackend] = useState(false);
 
   const saveConnectionToBackend = useCallback(async (connected: boolean, phoneNumber?: string | null) => {
@@ -56,15 +59,20 @@ export function WhatsAppConnection({ slug, onConnectionChange }: WhatsAppConnect
       const result = await response.json();
       
       if (result.success) {
-        setStatus(result.data);
-        onConnectionChange?.(result.data.connected);
-        
-        // If connected, clear QR code
-        if (result.data.connected) {
+        // Só consideramos "conectado" se ESTE estabelecimento de fato conectou.
+        // Isso evita herdar uma instância antiga/com mesmo slug que ficou aberta
+        // no servidor Evolution (conta recém-criada deve aparecer desconectada).
+        const ownedByThisEstablishment = backendConnected || connecting || savedToBackend;
+        const liveOpen = result.data.connected === true;
+        const effectiveConnected = liveOpen && ownedByThisEstablishment;
+
+        setStatus({ ...result.data, connected: effectiveConnected });
+        onConnectionChange?.(effectiveConnected);
+
+        // Se conectou de fato, limpa o QR e persiste no backend uma única vez
+        if (effectiveConnected) {
           setQrCode(null);
           setConnecting(false);
-          
-          // Save to backend only once
           saveConnectionToBackend(true, result.data.phoneNumber);
         }
       }
@@ -73,7 +81,7 @@ export function WhatsAppConnection({ slug, onConnectionChange }: WhatsAppConnect
     } finally {
       setLoading(false);
     }
-  }, [slug, onConnectionChange, saveConnectionToBackend]);
+  }, [slug, backendConnected, connecting, savedToBackend, onConnectionChange, saveConnectionToBackend]);
 
   const createInstance = async () => {
     const response = await fetch('/api/evolution/instance', {
