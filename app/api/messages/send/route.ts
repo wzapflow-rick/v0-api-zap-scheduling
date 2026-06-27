@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { evolutionApi } from '@/lib/evolution-api';
+import { evolutionApi, getInstanceName } from '@/lib/evolution-api';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { 
   verifyAuth, 
@@ -10,6 +10,7 @@ import {
   validatePhone,
   sanitizeString,
   validateSlug,
+  validateEstablishmentId,
 } from '@/lib/api-auth';
 import { 
   formatMessage, 
@@ -39,12 +40,14 @@ export async function POST(request: Request) {
       messageType, 
       appointmentData, 
       instanceName,
+      establishmentId,
       slug,
       customMessage,
     } = body as {
       messageType?: MessageTemplate['trigger'];
       appointmentData?: AppointmentData;
       instanceName?: string;
+      establishmentId?: string;
       slug?: string;
       customMessage?: string;
     };
@@ -58,8 +61,15 @@ export async function POST(request: Request) {
       return badRequestResponse('Formato de telefone inválido');
     }
 
-    // Determine instance name from slug or direct instanceName
+    // Determine instance name: prefer establishmentId (canônico), then instanceName direto,
+    // e por fim slug (compatibilidade legada).
     let resolvedInstanceName = instanceName;
+    if (!resolvedInstanceName && establishmentId) {
+      if (!validateEstablishmentId(establishmentId)) {
+        return badRequestResponse('ID do estabelecimento inválido');
+      }
+      resolvedInstanceName = getInstanceName(establishmentId);
+    }
     if (!resolvedInstanceName && slug) {
       if (!validateSlug(slug)) {
         return badRequestResponse('Slug do estabelecimento inválido');
@@ -68,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     if (!resolvedInstanceName) {
-      return badRequestResponse('Nome da instância ou slug do estabelecimento é obrigatório');
+      return badRequestResponse('Identificação da instância (establishmentId/instanceName) é obrigatória');
     }
 
     // 4. Rate limiting - use slug or instance name as identifier

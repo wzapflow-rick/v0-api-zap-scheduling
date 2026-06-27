@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getInstanceStatus, getInstanceInfo } from '@/lib/evolution-api';
+import { getInstanceStatus, getInstanceInfo, getInstanceName } from '@/lib/evolution-api';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { 
   verifyAuth, 
@@ -7,7 +7,7 @@ import {
   rateLimitResponse, 
   badRequestResponse,
   internalErrorResponse,
-  validateSlug,
+  validateEstablishmentId,
 } from '@/lib/api-auth';
 
 export async function GET(request: Request) {
@@ -18,27 +18,27 @@ export async function GET(request: Request) {
       return unauthorizedResponse(auth.error);
     }
 
-    // 2. Get and validate slug
+    // 2. Get and validate establishmentId
     const { searchParams } = new URL(request.url);
-    const slug = searchParams.get('slug');
+    const establishmentId = searchParams.get('establishmentId');
 
-    if (!slug) {
-      return badRequestResponse('Slug do estabelecimento é obrigatório');
+    if (!establishmentId) {
+      return badRequestResponse('ID do estabelecimento é obrigatório');
     }
 
-    if (!validateSlug(slug)) {
-      return badRequestResponse('Slug do estabelecimento inválido');
+    if (!validateEstablishmentId(establishmentId)) {
+      return badRequestResponse('ID do estabelecimento inválido');
     }
 
     // 3. Rate limiting (using general limit for status checks)
-    const rateLimitKey = `status:${slug}`;
+    const rateLimitKey = `status:${establishmentId}`;
     const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMITS.general);
     
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetIn);
     }
 
-    const instanceName = `ZapFlow-Agenda_${slug}`;
+    const instanceName = getInstanceName(establishmentId);
     
     // 4. Get connection state
     const statusResult = await getInstanceStatus(instanceName);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectInstance } from '@/lib/evolution-api';
+import { connectInstance, getInstanceName } from '@/lib/evolution-api';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { 
   verifyAuth, 
@@ -7,7 +7,7 @@ import {
   rateLimitResponse, 
   badRequestResponse,
   internalErrorResponse,
-  validateSlug,
+  validateEstablishmentId,
 } from '@/lib/api-auth';
 
 export async function GET(request: Request) {
@@ -18,22 +18,22 @@ export async function GET(request: Request) {
       return unauthorizedResponse(auth.error);
     }
 
-    // 2. Get and validate slug
+    // 2. Get and validate establishmentId
     const { searchParams } = new URL(request.url);
-    const slug = searchParams.get('slug');
+    const establishmentId = searchParams.get('establishmentId');
 
-    if (!slug) {
-      return badRequestResponse('Slug do estabelecimento é obrigatório');
+    if (!establishmentId) {
+      return badRequestResponse('ID do estabelecimento é obrigatório');
     }
 
-    if (!validateSlug(slug)) {
-      return badRequestResponse('Slug do estabelecimento inválido');
+    if (!validateEstablishmentId(establishmentId)) {
+      return badRequestResponse('ID do estabelecimento inválido');
     }
 
-    const instanceName = `ZapFlow-Agenda_${slug}`;
+    const instanceName = getInstanceName(establishmentId);
 
     // 3. Rate limiting
-    const rateLimitKey = `qrcode:${slug}`;
+    const rateLimitKey = `qrcode:${establishmentId}`;
     const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMITS.qrcode);
     
     if (!rateLimit.success) {
@@ -50,9 +50,22 @@ export async function GET(request: Request) {
       );
     }
 
+    // Normaliza o QR: a Evolution retorna base64 na raiz ou aninhado em `qrcode`
+    const raw = (result.data || {}) as {
+      base64?: string;
+      code?: string;
+      pairingCode?: string;
+      qrcode?: { base64?: string; code?: string; pairingCode?: string };
+    };
+    const normalized = {
+      base64: raw.base64 || raw.qrcode?.base64 || null,
+      code: raw.code || raw.qrcode?.code || null,
+      pairingCode: raw.pairingCode || raw.qrcode?.pairingCode || null,
+    };
+
     return NextResponse.json({
       success: true,
-      data: result.data,
+      data: normalized,
     }, {
       headers: {
         'X-RateLimit-Remaining': String(rateLimit.remaining),

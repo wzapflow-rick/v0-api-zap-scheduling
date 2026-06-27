@@ -10,9 +10,23 @@ interface EvolutionResponse<T = unknown> {
 // Helper to get env vars at runtime (not at module load time)
 function getEvolutionConfig() {
   return {
-    apiUrl: process.env.EVOLUTION_API_URL,
+    // Aceita EVOLUTION_API_URL (atual) ou EVOLUTION_URL (padrão do outro SaaS)
+    apiUrl: process.env.EVOLUTION_API_URL || process.env.EVOLUTION_URL,
     apiKey: process.env.EVOLUTION_API_KEY,
   };
+}
+
+/**
+ * Nome canônico da instância Evolution para um estabelecimento.
+ *
+ * IMPORTANTE: usamos o ID único e imutável do estabelecimento (não o slug).
+ * O slug pode ser reaproveitado entre contas (ex.: conta de teste apagada e
+ * recriada com o mesmo nome), o que fazia uma conta nova "herdar" uma instância
+ * antiga que ficou aberta no servidor Evolution. O ID nunca se repete, então
+ * cada estabelecimento tem sempre a sua própria instância isolada.
+ */
+export function getInstanceName(establishmentId: string): string {
+  return `ZapFlow-Agenda_${establishmentId}`;
 }
 
 async function evolutionFetch<T>(

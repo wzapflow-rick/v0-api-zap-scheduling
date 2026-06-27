@@ -106,3 +106,12 @@ export function validateSlug(slug: string): boolean {
   // Slug should be alphanumeric with hyphens, 3-50 chars
   return /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug);
 }
+
+/**
+ * Valida o ID do estabelecimento (usado para nomear a instância Evolution).
+ * Aceita UUID / cuid / ObjectId etc.: alfanumérico com hífen/underscore, 1-64 chars.
+ */
+export function validateEstablishmentId(id: string): boolean {
+  if (!id || typeof id !== 'string') return false;
+  return /^[A-Za-z0-9_-]{1,64}$/.test(id);
+}

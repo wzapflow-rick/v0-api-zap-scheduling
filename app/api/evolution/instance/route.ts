@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createInstance, deleteInstance, logoutInstance, getInstanceInfo } from '@/lib/evolution-api';
+import { createInstance, deleteInstance, logoutInstance, getInstanceInfo, getInstanceName } from '@/lib/evolution-api';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { 
   verifyAuth, 
@@ -7,7 +7,7 @@ import {
   rateLimitResponse, 
   badRequestResponse,
   internalErrorResponse,
-  validateSlug,
+  validateEstablishmentId,
 } from '@/lib/api-auth';
 
 // Create or get instance for establishment
@@ -27,25 +27,25 @@ export async function POST(request: Request) {
       return badRequestResponse('Corpo da requisição inválido');
     }
 
-    const { slug } = body;
+    const { establishmentId } = body;
     
-    if (!slug) {
-      return badRequestResponse('Slug do estabelecimento é obrigatório');
+    if (!establishmentId) {
+      return badRequestResponse('ID do estabelecimento é obrigatório');
     }
 
-    if (!validateSlug(slug)) {
-      return badRequestResponse('Slug do estabelecimento inválido');
+    if (!validateEstablishmentId(establishmentId)) {
+      return badRequestResponse('ID do estabelecimento inválido');
     }
 
     // 3. Rate limiting
-    const rateLimitKey = `instance:${slug}`;
+    const rateLimitKey = `instance:${establishmentId}`;
     const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMITS.instance);
     
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetIn);
     }
 
-    const instanceName = `ZapFlow-Agenda_${slug}`;
+    const instanceName = getInstanceName(establishmentId);
     
     // 4. Try to get existing instance first
     const existingInstance = await getInstanceInfo(instanceName);
@@ -104,15 +104,15 @@ export async function DELETE(request: Request) {
 
     // 2. Get and validate parameters
     const { searchParams } = new URL(request.url);
-    const slug = searchParams.get('slug');
+    const establishmentId = searchParams.get('establishmentId');
     const action = searchParams.get('action') || 'logout'; // logout or delete
 
-    if (!slug) {
-      return badRequestResponse('Slug do estabelecimento é obrigatório');
+    if (!establishmentId) {
+      return badRequestResponse('ID do estabelecimento é obrigatório');
     }
 
-    if (!validateSlug(slug)) {
-      return badRequestResponse('Slug do estabelecimento inválido');
+    if (!validateEstablishmentId(establishmentId)) {
+      return badRequestResponse('ID do estabelecimento inválido');
     }
 
     if (!['logout', 'delete'].includes(action)) {
@@ -120,14 +120,14 @@ export async function DELETE(request: Request) {
     }
 
     // 3. Rate limiting
-    const rateLimitKey = `instance:${slug}`;
+    const rateLimitKey = `instance:${establishmentId}`;
     const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMITS.instance);
     
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetIn);
     }
 
-    const instanceName = `ZapFlow-Agenda_${slug}`;
+    const instanceName = getInstanceName(establishmentId);
     
     // 4. Execute action
     let result;

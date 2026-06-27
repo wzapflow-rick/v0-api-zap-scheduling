@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { evolutionApi } from '@/lib/evolution-api';
+import { evolutionApi, getInstanceName } from '@/lib/evolution-api';
 import { formatPhoneForWhatsApp } from '@/lib/message-service';
 import {
   resolveTemplateBody,
@@ -26,6 +26,7 @@ interface PendingWorkItem {
   appointmentId: string;
   action: string;
   // identificação da instância Evolution
+  establishmentId?: string;
   establishmentSlug?: string;
   slug?: string;
   instanceName?: string;
@@ -179,7 +180,11 @@ async function handle(req: NextRequest) {
 
       const slug = item.establishmentSlug || item.slug || '';
       const body = renderTemplate(resolveTemplateBody(messageType, item.templateId), vars);
-      const instanceName = item.instanceName || `ZapFlow-Agenda_${slug}`;
+      // Prefere instanceName explícito, depois o ID canônico do estabelecimento,
+      // e por fim o slug (compatibilidade legada).
+      const instanceName =
+        item.instanceName ||
+        (item.establishmentId ? getInstanceName(item.establishmentId) : `ZapFlow-Agenda_${slug}`);
       const phone = formatPhoneForWhatsApp(item.clientPhone || '');
 
       const sendResult = await evolutionApi.sendTextMessage(instanceName, phone, body);

@@ -55,7 +55,7 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
-  const slug = user?.establishment?.slug;
+  const establishmentId = user?.establishment?.id;
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -78,7 +78,7 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <BusinessConfigProvider>
-        <AutoMessagesProvider slug={slug}>
+        <AutoMessagesProvider establishmentId={establishmentId}>
           <div className="min-h-screen bg-background">
             <DashboardContent>{children}</DashboardContent>
           </div>

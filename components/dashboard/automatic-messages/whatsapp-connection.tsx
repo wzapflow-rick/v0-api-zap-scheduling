@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +9,8 @@ import { toast } from 'sonner';
 import { automaticMessagesApi } from '@/lib/api';
 
 interface WhatsAppConnectionProps {
-  slug: string;
-  /** Flag persistido no backend: se ESTE estabelecimento já conectou o WhatsApp. */
-  backendConnected?: boolean;
+  /** ID único e imutável do estabelecimento (base do nome da instância Evolution). */
+  establishmentId: string;
   onConnectionChange?: (connected: boolean) => void;
 }
 
@@ -25,109 +24,103 @@ interface ConnectionStatus {
 }
 
 interface QRCodeData {
-  base64?: string;
-  code?: string;
-  pairingCode?: string;
+  base64?: string | null;
+  code?: string | null;
+  pairingCode?: string | null;
 }
 
-export function WhatsAppConnection({ slug, backendConnected = false, onConnectionChange }: WhatsAppConnectionProps) {
+export function WhatsAppConnection({ establishmentId, onConnectionChange }: WhatsAppConnectionProps) {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [qrCode, setQrCode] = useState<QRCodeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  // Marca que este estabelecimento confirmou a conexão (via backend ou nesta sessão)
-  const [savedToBackend, setSavedToBackend] = useState(false);
+  // Evita persistir repetidamente o mesmo estado no backend
+  const savedConnectedRef = useRef(false);
 
-  const saveConnectionToBackend = useCallback(async (connected: boolean, phoneNumber?: string | null) => {
-    if (savedToBackend && connected) return; // Already saved as connected
-    
+  const persistConnection = useCallback(async (connected: boolean, phoneNumber?: string | null) => {
     try {
       await automaticMessagesApi.updateWhatsAppConnection({
         connected,
         phone: phoneNumber || null,
       });
-      if (connected) setSavedToBackend(true);
     } catch {
-      // Backend endpoint may not exist yet - silently fail
+      // Endpoint do backend pode não existir ainda — falha silenciosa
     }
-  }, [savedToBackend]);
+  }, []);
 
+  // Verifica o estado real da instância no servidor Evolution.
+  // Como a instância é nomeada pelo ID único do estabelecimento, "open" significa
+  // que ESTE estabelecimento está de fato conectado (sem herdar instâncias antigas).
   const checkStatus = useCallback(async () => {
     try {
-      const response = await fetch(`/api/evolution/status?slug=${slug}`);
+      const response = await fetch(`/api/evolution/status?establishmentId=${establishmentId}`);
       const result = await response.json();
-      
-      if (result.success) {
-        // Só consideramos "conectado" se ESTE estabelecimento de fato conectou.
-        // Isso evita herdar uma instância antiga/com mesmo slug que ficou aberta
-        // no servidor Evolution (conta recém-criada deve aparecer desconectada).
-        const ownedByThisEstablishment = backendConnected || connecting || savedToBackend;
-        const liveOpen = result.data.connected === true;
-        const effectiveConnected = liveOpen && ownedByThisEstablishment;
 
-        setStatus({ ...result.data, connected: effectiveConnected });
-        onConnectionChange?.(effectiveConnected);
+      if (result.success && result.data) {
+        const connected = result.data.connected === true;
+        setStatus(result.data);
+        onConnectionChange?.(connected);
 
-        // Se conectou de fato, limpa o QR e persiste no backend uma única vez
-        if (effectiveConnected) {
+        if (connected) {
           setQrCode(null);
           setConnecting(false);
-          saveConnectionToBackend(true, result.data.phoneNumber);
+          if (!savedConnectedRef.current) {
+            savedConnectedRef.current = true;
+            persistConnection(true, result.data.phoneNumber);
+          }
+        } else {
+          savedConnectedRef.current = false;
         }
       }
     } catch {
-      // Silently fail
+      // Falha silenciosa — mantém o estado atual
     } finally {
       setLoading(false);
     }
-  }, [slug, backendConnected, connecting, savedToBackend, onConnectionChange, saveConnectionToBackend]);
+  }, [establishmentId, onConnectionChange, persistConnection]);
 
-  const createInstance = async () => {
-    const response = await fetch('/api/evolution/instance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug }),
-    });
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error);
-    }
-    
-    return result.data;
-  };
-
-  const getQRCode = async () => {
+  const fetchQRCode = useCallback(async (): Promise<QRCodeData | null> => {
     try {
-      const response = await fetch(`/api/evolution/qrcode?slug=${slug}`);
+      const response = await fetch(`/api/evolution/qrcode?establishmentId=${establishmentId}`);
       const result = await response.json();
-      
       if (result.success && result.data) {
         setQrCode(result.data);
         return result.data;
       }
-      
       return null;
     } catch {
       return null;
     }
-  };
+  }, [establishmentId]);
 
   const handleConnect = async () => {
     setConnecting(true);
     setQrCode(null);
-    
+
     try {
-      // First, create/get instance
-      await createInstance();
-      
-      // Then get QR code
-      const qr = await getQRCode();
-      
+      // 1. Cria (ou recupera) a instância deste estabelecimento
+      const createResponse = await fetch('/api/evolution/instance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ establishmentId }),
+      });
+      const createResult = await createResponse.json();
+      if (!createResult.success) {
+        throw new Error(createResult.error || 'Falha ao criar a instância');
+      }
+
+      // 2. Busca o QR Code para escanear
+      const qr = await fetchQRCode();
+
+      // 3. Se não veio QR, pode já estar conectado — confere o status
       if (!qr?.base64) {
-        // If no QR code, maybe already connected - check status
         await checkStatus();
+        if (!status?.connected) {
+          toast.message('Aguarde um instante e tente atualizar o QR Code.');
+        }
+      } else {
+        toast.success('QR Code gerado! Escaneie com seu WhatsApp.');
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao conectar');
@@ -137,23 +130,22 @@ export function WhatsAppConnection({ slug, backendConnected = false, onConnectio
 
   const handleDisconnect = async () => {
     setDisconnecting(true);
-    
+
     try {
       const response = await fetch(
-        `/api/evolution/instance?slug=${slug}&action=logout`,
+        `/api/evolution/instance?establishmentId=${establishmentId}&action=logout`,
         { method: 'DELETE' }
       );
       const result = await response.json();
-      
+
       if (result.success) {
         toast.success('WhatsApp desconectado');
-        setStatus(prev => prev ? { ...prev, connected: false, state: 'close' } : null);
+        setStatus((prev) => (prev ? { ...prev, connected: false, state: 'close' } : null));
         setQrCode(null);
+        setConnecting(false);
+        savedConnectedRef.current = false;
         onConnectionChange?.(false);
-        setSavedToBackend(false);
-        
-        // Save disconnection to backend
-        saveConnectionToBackend(false, null);
+        persistConnection(false, null);
       } else {
         throw new Error(result.error);
       }
@@ -166,26 +158,26 @@ export function WhatsAppConnection({ slug, backendConnected = false, onConnectio
 
   const handleRefreshQR = async () => {
     setQrCode(null);
-    await getQRCode();
+    await fetchQRCode();
   };
 
-  // Initial status check
+  // Verificação inicial do status
   useEffect(() => {
     checkStatus();
   }, [checkStatus]);
 
-  // Poll for status when connecting (waiting for QR scan)
+  // Enquanto aguarda a leitura do QR, faz polling do status a cada 3s
   useEffect(() => {
-    if (!connecting || !qrCode) return;
+    if (!connecting || !qrCode?.base64) return;
 
-    const interval = setInterval(async () => {
-      await checkStatus();
-    }, 3000); // Check every 3 seconds
+    const interval = setInterval(() => {
+      checkStatus();
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [connecting, qrCode, checkStatus]);
 
-  // Auto-refresh QR code every 45 seconds when showing
+  // Atualiza o QR automaticamente a cada 45s enquanto estiver visível
   useEffect(() => {
     if (!qrCode?.base64) return;
 
@@ -194,6 +186,7 @@ export function WhatsAppConnection({ slug, backendConnected = false, onConnectio
     }, 45000);
 
     return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qrCode]);
 
   if (loading) {
@@ -206,7 +199,7 @@ export function WhatsAppConnection({ slug, backendConnected = false, onConnectio
     );
   }
 
-  const isConnected = status?.connected;
+  const isConnected = status?.connected === true;
 
   return (
     <Card>
@@ -244,8 +237,8 @@ export function WhatsAppConnection({ slug, backendConnected = false, onConnectio
             <div className="flex items-center gap-3">
               {status?.profilePictureUrl ? (
                 <img
-                  src={status.profilePictureUrl}
-                  alt="Profile"
+                  src={status.profilePictureUrl || "/placeholder.svg"}
+                  alt="Foto do perfil do WhatsApp"
                   className="h-12 w-12 rounded-full object-cover"
                 />
               ) : (
@@ -256,9 +249,7 @@ export function WhatsAppConnection({ slug, backendConnected = false, onConnectio
               <div>
                 <p className="font-medium">{status?.profileName || 'WhatsApp Conectado'}</p>
                 {status?.phoneNumber && (
-                  <p className="text-sm text-muted-foreground">
-                    {status.phoneNumber}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{status.phoneNumber}</p>
                 )}
               </div>
             </div>
@@ -282,11 +273,7 @@ export function WhatsAppConnection({ slug, backendConnected = false, onConnectio
               Escaneie o QR Code com seu WhatsApp para conectar
             </p>
             <div className="relative rounded-lg border-2 border-dashed border-primary/30 bg-white p-4">
-              <img
-                src={qrCode.base64}
-                alt="QR Code WhatsApp"
-                className="h-48 w-48"
-              />
+              <img src={qrCode.base64 || "/placeholder.svg"} alt="QR Code do WhatsApp" className="h-48 w-48" />
             </div>
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />

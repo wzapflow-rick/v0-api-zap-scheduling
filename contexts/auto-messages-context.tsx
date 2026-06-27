@@ -3,6 +3,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { automaticMessagesApi } from '@/lib/api';
 
+// Mesmo formato de getInstanceName() em lib/evolution-api.ts.
+// Inlinado aqui para não puxar o módulo server-side para o bundle do client.
+const buildInstanceName = (establishmentId: string) => `ZapFlow-Agenda_${establishmentId}`;
+
 interface AutoMessagesConfig {
   whatsappConnected: boolean;
   whatsappPhone: string | null;
@@ -26,10 +30,13 @@ const defaultConfig: AutoMessagesConfig = {
 
 const AutoMessagesContext = createContext<AutoMessagesContextValue | undefined>(undefined);
 
-export function AutoMessagesProvider({ children, slug }: { children: ReactNode; slug?: string }) {
+export function AutoMessagesProvider({ children, establishmentId }: { children: ReactNode; establishmentId?: string }) {
   const [config, setConfig] = useState<AutoMessagesConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Nome canônico da instância derivado do ID único do estabelecimento
+  const fallbackInstanceName = establishmentId ? buildInstanceName(establishmentId) : null;
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -40,26 +47,24 @@ export function AutoMessagesProvider({ children, slug }: { children: ReactNode; 
         setConfig({
           whatsappConnected: result.data.whatsappConnected || false,
           whatsappPhone: result.data.whatsappPhone || null,
-          whatsappInstanceName: result.data.whatsappInstanceName || (slug ? `ZapFlow-Agenda_${slug}` : null),
+          whatsappInstanceName: result.data.whatsappInstanceName || fallbackInstanceName,
         });
       } else {
-        // Use slug-based instance name as fallback
         setConfig({
           ...defaultConfig,
-          whatsappInstanceName: slug ? `ZapFlow-Agenda_${slug}` : null,
+          whatsappInstanceName: fallbackInstanceName,
         });
       }
     } catch {
       setError('Erro ao carregar configurações de mensagens');
-      // Use slug-based instance name as fallback
       setConfig({
         ...defaultConfig,
-        whatsappInstanceName: slug ? `ZapFlow-Agenda_${slug}` : null,
+        whatsappInstanceName: fallbackInstanceName,
       });
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, [fallbackInstanceName]);
 
   useEffect(() => {
     fetchConfig();
