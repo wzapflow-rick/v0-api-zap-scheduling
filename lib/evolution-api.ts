@@ -107,9 +107,11 @@ export async function connectInstance(instanceName: string) {
 }
 
 export async function getInstanceStatus(instanceName: string) {
+  // A Evolution pode responder o estado aninhado em `instance.state`
+  // ou direto na raiz como `state`, dependendo da versão.
   return evolutionFetch<{
-    instance: string;
-    state: 'open' | 'close' | 'connecting';
+    instance?: { instanceName?: string; state?: 'open' | 'close' | 'connecting' };
+    state?: 'open' | 'close' | 'connecting';
   }>(`/instance/connectionState/${instanceName}`, {
     method: 'GET',
   });

@@ -61,9 +61,10 @@ export async function GET(request: Request) {
       });
     }
 
-    // Evolution API returns { instance: { instanceName, state } }
-    const instanceData = statusResult.data as { instance?: { state?: string } };
-    const state = instanceData?.instance?.state || 'close';
+    // A Evolution pode retornar o estado aninhado em { instance: { state } }
+    // ou direto na raiz { state }, dependendo da versão. Lemos ambos.
+    const instanceData = statusResult.data as { instance?: { state?: string }; state?: string };
+    const state = instanceData?.instance?.state || instanceData?.state || 'close';
 
     // 5. If connected, get profile info
     let profileInfo = null;
