@@ -413,8 +413,8 @@ export default function ConfiguracoesPage() {
         </TabsContent>
 
         <TabsContent value="mensagens">
-          {establishment?.slug && (
-            <AutomaticMessages slug={establishment.slug} />
+          {establishment?.id && (
+            <AutomaticMessages establishmentId={establishment.id} />
           )}
         </TabsContent>
 

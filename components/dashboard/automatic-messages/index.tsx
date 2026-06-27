@@ -7,7 +7,7 @@ import { WhatsAppConnection } from './whatsapp-connection';
 import { automaticMessagesApi } from '@/lib/api';
 
 interface AutomaticMessagesProps {
-  slug: string;
+  establishmentId: string;
 }
 
 const messageTypes = [
@@ -19,7 +19,7 @@ const messageTypes = [
   { id: 'reminder_1h', label: 'Lembrete 1h', description: 'Enviada 1h antes do agendamento' },
 ];
 
-export function AutomaticMessages({ slug }: AutomaticMessagesProps) {
+export function AutomaticMessages({ establishmentId }: AutomaticMessagesProps) {
   const [whatsappConnected, setWhatsappConnected] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -65,8 +65,7 @@ export function AutomaticMessages({ slug }: AutomaticMessagesProps) {
 
       {/* WhatsApp Connection */}
       <WhatsAppConnection
-        slug={slug}
-        backendConnected={whatsappConnected}
+        establishmentId={establishmentId}
         onConnectionChange={handleConnectionChange}
       />
 

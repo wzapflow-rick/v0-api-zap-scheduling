@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       data: {
         instanceName,
         exists: false,
-        ...result.data,
+        ...(result.data && typeof result.data === 'object' ? result.data : {}),
       },
     }, {
       headers: {
