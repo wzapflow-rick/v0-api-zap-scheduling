@@ -77,6 +77,26 @@ export async function POST(request: Request) {
     const result = await createInstance(instanceName);
 
     if (!result.success) {
+      // A Evolution responde 403 "This name is already in use" quando a
+      // instância JÁ existe. Isso não é um erro para o nosso fluxo: significa
+      // que ela está pronta para receber o /connect e gerar o QR Code.
+      // Tratamos como sucesso para não bloquear a conexão caso o fetchInstances
+      // tenha retornado num formato que não conseguimos casar pelo nome.
+      const alreadyExists = /already\s+(in\s+use|exists)|já\s+está\s+em\s+uso/i.test(
+        result.error || ''
+      );
+
+      if (alreadyExists) {
+        return NextResponse.json({
+          success: true,
+          data: { instanceName, exists: true },
+        }, {
+          headers: {
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+          },
+        });
+      }
+
       return NextResponse.json(
         { success: false, error: result.error },
         { status: 502 }

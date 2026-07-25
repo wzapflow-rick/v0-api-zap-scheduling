@@ -57,8 +57,18 @@ export async function GET(request: Request) {
       pairingCode?: string;
       qrcode?: { base64?: string; code?: string; pairingCode?: string };
     };
+    const rawBase64 = raw.base64 || raw.qrcode?.base64 || null;
+
+    // Algumas versões da Evolution devolvem o base64 puro, sem o prefixo data URL.
+    // Sem o prefixo a tag <img> não renderiza (QR aparece em branco), então
+    // garantimos que ele esteja sempre presente.
+    const base64 =
+      rawBase64 && !rawBase64.startsWith('data:')
+        ? `data:image/png;base64,${rawBase64}`
+        : rawBase64;
+
     const normalized = {
-      base64: raw.base64 || raw.qrcode?.base64 || null,
+      base64,
       code: raw.code || raw.qrcode?.code || null,
       pairingCode: raw.pairingCode || raw.qrcode?.pairingCode || null,
     };
