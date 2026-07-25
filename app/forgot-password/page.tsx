@@ -315,8 +315,11 @@ export default function ForgotPasswordPage() {
                   placeholder="(11) 99999-9999"
                   value={formatPhoneBR(phoneValue)}
                   onChange={(e) => {
+                    // Sem shouldValidate: validar a cada tecla insere/remove as
+                    // mensagens de erro, deslocando os irmãos no DOM e
+                    // remontando o input — o campo perderia o foco a cada dígito.
                     phoneForm.setValue('phone', formatPhoneBR(e.target.value), {
-                      shouldValidate: true,
+                      shouldDirty: true,
                     });
                   }}
                   disabled={isLoading || isLocked}

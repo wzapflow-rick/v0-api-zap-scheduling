@@ -46,6 +46,51 @@ const strengthConfig = {
   forte: { label: 'Forte', color: 'bg-emerald-500', width: 'w-full' },
 };
 
+/**
+ * IMPORTANTE: este componente precisa ficar FORA do RegisterPage.
+ * Quando era declarado dentro, cada render criava um tipo de componente novo,
+ * fazendo o React desmontar e remontar o <Input> a cada tecla — e o campo
+ * perdia o foco depois de cada dígito.
+ */
+function InputWrapper({
+  name,
+  label,
+  icon: Icon,
+  focused,
+  children,
+}: {
+  name: string;
+  label: string;
+  icon: React.ElementType;
+  focused: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label
+        htmlFor={name}
+        className={cn(
+          'text-sm font-medium transition-colors',
+          focused ? 'text-emerald-500' : 'text-foreground'
+        )}
+      >
+        {label}
+      </Label>
+      <div className="relative">
+        <div
+          className={cn(
+            'absolute left-3 top-1/2 z-10 -translate-y-1/2 transition-colors',
+            focused ? 'text-emerald-500' : 'text-muted-foreground'
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
@@ -138,39 +183,6 @@ export default function RegisterPage() {
     }
   };
 
-  const InputWrapper = ({ 
-    name, 
-    label, 
-    icon: Icon, 
-    children 
-  }: { 
-    name: string; 
-    label: string; 
-    icon: React.ElementType; 
-    children: React.ReactNode;
-  }) => (
-    <div className="space-y-2">
-      <Label 
-        htmlFor={name}
-        className={cn(
-          'text-sm font-medium transition-colors',
-          focusedField === name ? 'text-emerald-500' : 'text-foreground'
-        )}
-      >
-        {label}
-      </Label>
-      <div className="relative">
-        <div className={cn(
-          'absolute left-3 top-1/2 -translate-y-1/2 transition-colors z-10',
-          focusedField === name ? 'text-emerald-500' : 'text-muted-foreground'
-        )}>
-          <Icon className="h-5 w-5" />
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
@@ -185,8 +197,17 @@ export default function RegisterPage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        {/* Name Field */}
-        <InputWrapper name="name" label="Seu nome" icon={User}>
+        {/* Name Field.
+            As `key` abaixo são essenciais: os parágrafos de erro entram e saem
+            do DOM, e sem uma identidade estável o React casa os filhos do form
+            por POSIÇÃO — remontando o input que estava em foco a cada tecla. */}
+        <InputWrapper
+          key="field-name"
+          name="name"
+          label="Seu nome"
+          icon={User}
+          focused={focusedField === 'name'}
+        >
           <Input
             id="name"
             placeholder="João Silva"
@@ -202,13 +223,22 @@ export default function RegisterPage() {
           />
         </InputWrapper>
         {errors.name && (
-          <p className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <p
+            key="error-name"
+            className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200"
+          >
             {errors.name.message}
           </p>
         )}
 
         {/* Email Field */}
-        <InputWrapper name="email" label="E-mail" icon={Mail}>
+        <InputWrapper
+          key="field-email"
+          name="email"
+          label="E-mail"
+          icon={Mail}
+          focused={focusedField === 'email'}
+        >
           <Input
             id="email"
             type="email"
@@ -225,13 +255,22 @@ export default function RegisterPage() {
           />
         </InputWrapper>
         {errors.email && (
-          <p className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <p
+            key="error-email"
+            className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200"
+          >
             {errors.email.message}
           </p>
         )}
 
         {/* Phone Field — máscara + validação de DDD/dígitos */}
-        <InputWrapper name="phone" label="Telefone/WhatsApp" icon={Phone}>
+        <InputWrapper
+          key="field-phone"
+          name="phone"
+          label="Telefone/WhatsApp"
+          icon={Phone}
+          focused={focusedField === 'phone'}
+        >
           <Input
             id="phone"
             type="tel"
@@ -241,9 +280,15 @@ export default function RegisterPage() {
             placeholder="(11) 99999-9999"
             value={formatPhoneBR(phoneValue)}
             onChange={(e) => {
-              // Formata enquanto digita para o usuário conferir o número
+              // Formata enquanto digita para o usuário conferir o número.
+              // NÃO usar shouldValidate aqui: isso validaria o formulário
+              // inteiro a cada tecla, fazendo surgir as mensagens de erro dos
+              // campos ainda vazios acima deste. Como esses parágrafos entram
+              // e saem do DOM, os irmãos se deslocam, o React remonta o input
+              // e o campo perde o foco a cada dígito. O aviso ao lado já dá o
+              // feedback ao vivo, e o zod valida normalmente no envio.
               setValue('phone', formatPhoneBR(e.target.value), {
-                shouldValidate: true,
+                shouldDirty: true,
               });
             }}
             disabled={isLoading || isLocked}
@@ -259,6 +304,7 @@ export default function RegisterPage() {
           />
         </InputWrapper>
         <p
+          key="hint-phone"
           id="phone-hint"
           className={cn(
             'text-sm -mt-3 animate-in fade-in slide-in-from-top-1 duration-200',
@@ -274,7 +320,13 @@ export default function RegisterPage() {
         </p>
 
         {/* Establishment Field */}
-        <InputWrapper name="establishmentName" label="Nome do estabelecimento" icon={Building2}>
+        <InputWrapper
+          key="field-establishment"
+          name="establishmentName"
+          label="Nome do estabelecimento"
+          icon={Building2}
+          focused={focusedField === 'establishmentName'}
+        >
           <Input
             id="establishmentName"
             placeholder="Barbearia do João"
@@ -290,13 +342,16 @@ export default function RegisterPage() {
           />
         </InputWrapper>
         {errors.establishmentName && (
-          <p className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <p
+            key="error-establishment"
+            className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200"
+          >
             {errors.establishmentName.message}
           </p>
         )}
 
         {/* Business Type Selector */}
-        <div className="space-y-2">
+        <div key="field-business-type" className="space-y-2">
           <Label className="text-sm font-medium text-foreground">
             Qual é o seu negócio?
           </Label>
@@ -328,7 +383,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Password Field */}
-        <div className="space-y-2">
+        <div key="field-password" className="space-y-2">
           <Label 
             htmlFor="password"
             className={cn(
@@ -406,7 +461,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Confirm Password Field */}
-        <div className="space-y-2">
+        <div key="field-confirm-password" className="space-y-2">
           <Label 
             htmlFor="confirmPassword"
             className={cn(
@@ -454,7 +509,8 @@ export default function RegisterPage() {
         </div>
 
         {/* Submit Button */}
-        <Button 
+        <Button
+          key="submit-button" 
           type="submit" 
           className={cn(
             'w-full h-12 text-base font-semibold transition-all',

@@ -16,6 +16,19 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // Em desenvolvimento o SW nao e registrado: o HMR troca os chunks a todo
+    // momento e um cache-first serviria arquivos defasados, gerando erros de
+    // hidratacao. Qualquer SW ativo de uma sessao anterior e removido aqui.
+    if (process.env.NODE_ENV === 'development') {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((reg) => reg.unregister());
+        });
+      }
+      startSyncEngine();
+      return () => stopSyncEngine();
+    }
+
     // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
