@@ -7,7 +7,7 @@ import type { SubscriptionUsage } from '@/types';
 const usageFetcher = async () => {
   const res = await subscriptionsApi.getUsage();
   if (!res.success) return null;
-  return res.data;
+  return res.data ?? null;
 };
 
 export function useUsage() {

@@ -53,7 +53,8 @@ const professionalsFetcher = async (key: [string, string]) => {
   if (!res.success) {
     return [];
   }
-  const professionals = res.data?.professionals || res.data || [];
+  const data = res.data as Professional[] | { professionals?: Professional[] } | null | undefined;
+  const professionals = (data && !Array.isArray(data) ? data.professionals : data) || [];
   return Array.isArray(professionals) ? professionals : [];
 };
 
@@ -62,7 +63,8 @@ const servicesFetcher = async () => {
   if (!res.success) {
     return [];
   }
-  const services = res.data?.services || res.data || [];
+  const data = res.data as Service[] | { services?: Service[] } | null | undefined;
+  const services = (data && !Array.isArray(data) ? data.services : data) || [];
   return Array.isArray(services) ? services : [];
 };
 

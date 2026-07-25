@@ -117,23 +117,77 @@ export async function getInstanceStatus(instanceName: string) {
   });
 }
 
+// A Evolution v1 retorna { instance: {...} } e a v2 retorna um ARRAY de instâncias
+// com campos diferentes (connectionStatus, profileName, profilePicUrl, ownerJid).
+// Tipamos como `unknown` e normalizamos em quem consome (rota de status).
 export async function getInstanceInfo(instanceName: string) {
-  return evolutionFetch<{
-    instance: {
-      instanceName: string;
-      instanceId: string;
-      owner: string;
-      profileName: string;
-      profilePictureUrl: string;
-      profileStatus: string;
-      status: string;
-      serverUrl: string;
-      apikey: string;
-      integration: string;
+  return evolutionFetch<unknown>(
+    `/instance/fetchInstances?instanceName=${instanceName}`,
+    {
+      method: 'GET',
+    }
+  );
+}
+
+/**
+ * Normaliza a resposta de fetchInstances entre Evolution v1 e v2.
+ * Retorna null quando a instância não é encontrada.
+ */
+export function normalizeInstanceInfo(
+  data: unknown,
+  instanceName: string
+): {
+  connectionStatus?: 'open' | 'close' | 'connecting';
+  profileName?: string;
+  profilePictureUrl?: string;
+  phoneNumber?: string;
+} | null {
+  if (!data) return null;
+
+  // v2: array de instâncias — encontramos a nossa pelo nome
+  if (Array.isArray(data)) {
+    const found = data.find((item) => {
+      const it = item as { name?: string; instanceName?: string };
+      return it?.name === instanceName || it?.instanceName === instanceName;
+    }) as
+      | {
+          connectionStatus?: 'open' | 'close' | 'connecting';
+          state?: 'open' | 'close' | 'connecting';
+          profileName?: string;
+          profilePicUrl?: string;
+          profilePictureUrl?: string;
+          ownerJid?: string;
+          owner?: string;
+          number?: string;
+        }
+      | undefined;
+
+    if (!found) return null;
+
+    return {
+      connectionStatus: found.connectionStatus || found.state,
+      profileName: found.profileName,
+      profilePictureUrl: found.profilePicUrl || found.profilePictureUrl,
+      phoneNumber: found.ownerJid || found.owner || found.number,
     };
-  }>(`/instance/fetchInstances?instanceName=${instanceName}`, {
-    method: 'GET',
-  });
+  }
+
+  // v1: { instance: {...} }
+  const nested = (data as { instance?: Record<string, unknown> }).instance;
+  if (nested) {
+    return {
+      connectionStatus: (nested.state || nested.connectionStatus) as
+        | 'open'
+        | 'close'
+        | 'connecting'
+        | undefined,
+      profileName: nested.profileName as string | undefined,
+      profilePictureUrl: nested.profilePictureUrl as string | undefined,
+      phoneNumber: nested.owner as string | undefined,
+    };
+  }
+
+  return null;
 }
 
 export async function deleteInstance(instanceName: string) {

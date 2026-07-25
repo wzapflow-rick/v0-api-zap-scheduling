@@ -9,7 +9,7 @@ const permissionsFetcher = async () => {
   if (!res.success) {
     return null;
   }
-  return res.data;
+  return res.data ?? null;
 };
 
 const trialEligibilityFetcher = async () => {
@@ -17,7 +17,7 @@ const trialEligibilityFetcher = async () => {
   if (!res.success) {
     return null;
   }
-  return res.data;
+  return res.data ?? null;
 };
 
 export function useSubscription() {

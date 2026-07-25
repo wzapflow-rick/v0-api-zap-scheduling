@@ -18,7 +18,7 @@ interface AutoMessagesContextValue {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  canSendMessage: () => boolean;
+  canSendMessage: (messageType?: string) => boolean;
   instanceName: string | null;
 }
 
@@ -71,7 +71,7 @@ export function AutoMessagesProvider({ children, establishmentId }: { children: 
   }, [fetchConfig]);
 
   // Simplified: can send if WhatsApp is connected and instanceName exists
-  const canSendMessage = useCallback((): boolean => {
+  const canSendMessage = useCallback((_messageType?: string): boolean => {
     if (!config) return false;
     if (!config.whatsappConnected) return false;
     if (!config.whatsappInstanceName) return false;
@@ -103,7 +103,7 @@ export function useAutoMessagesConfig() {
       loading: false,
       error: null,
       refresh: async () => {},
-      canSendMessage: () => false,
+      canSendMessage: (_messageType?: string) => false,
       instanceName: null,
     };
   }

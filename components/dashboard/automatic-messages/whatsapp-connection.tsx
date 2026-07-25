@@ -38,16 +38,23 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
   // Evita persistir repetidamente o mesmo estado no backend
   const savedConnectedRef = useRef(false);
 
-  const persistConnection = useCallback(async (connected: boolean, phoneNumber?: string | null) => {
-    try {
-      await automaticMessagesApi.updateWhatsAppConnection({
-        connected,
-        phone: phoneNumber || null,
-      });
-    } catch {
-      // Endpoint do backend pode não existir ainda — falha silenciosa
-    }
-  }, []);
+  const persistConnection = useCallback(
+    async (connected: boolean, phoneNumber?: string | null, instanceName?: string | null) => {
+      try {
+        await automaticMessagesApi.updateWhatsAppConnection({
+          connected,
+          phone: phoneNumber || null,
+          // Enviamos o instanceName exato que o front conectou na Evolution.
+          // Sem isso, o backend usava um fallback diferente (baseado no slug) e
+          // tentava enviar mensagens por uma instância inexistente.
+          instanceName: instanceName || undefined,
+        });
+      } catch {
+        // Endpoint do backend pode não existir ainda — falha silenciosa
+      }
+    },
+    []
+  );
 
   // Verifica o estado real da instância no servidor Evolution.
   // Como a instância é nomeada pelo ID único do estabelecimento, "open" significa
@@ -67,7 +74,7 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
           setConnecting(false);
           if (!savedConnectedRef.current) {
             savedConnectedRef.current = true;
-            persistConnection(true, result.data.phoneNumber);
+            persistConnection(true, result.data.phoneNumber, result.data.instanceName);
           }
         } else {
           savedConnectedRef.current = false;
@@ -166,16 +173,20 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
     checkStatus();
   }, [checkStatus]);
 
-  // Enquanto aguarda a leitura do QR, faz polling do status a cada 3s
+  // Faz polling contínuo do status a cada 3s ENQUANTO não estiver conectado.
+  // Antes o polling só rodava com o QR visível — quando o QR se auto-atualizava
+  // (a cada 45s) e a Evolution não devolvia novo base64 porque o número já havia
+  // conectado, o polling morria e o painel ficava travado em "Desconectado".
+  // Agora verificamos sempre até detectar a conexão, independentemente do QR.
   useEffect(() => {
-    if (!connecting || !qrCode?.base64) return;
+    if (status?.connected) return;
 
     const interval = setInterval(() => {
       checkStatus();
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [connecting, qrCode, checkStatus]);
+  }, [status?.connected, checkStatus]);
 
   // Atualiza o QR automaticamente a cada 45s enquanto estiver visível
   useEffect(() => {
