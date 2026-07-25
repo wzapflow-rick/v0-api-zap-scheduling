@@ -58,7 +58,8 @@ const monthlyAppointmentsFetcher = async (key: [string, string, string]) => {
   const [, startDate, endDate] = key;
   const res = await appointmentsApi.list({ startDate, endDate, limit: 1000 });
   if (!res.success) return [];
-  const data = res.data;
+  // A resposta pode vir como array direto ou paginada ({ appointments: [...] })
+  const data = res.data as Appointment[] | { appointments?: Appointment[] } | null | undefined;
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.appointments)) return data.appointments;
   return [];
@@ -67,7 +68,8 @@ const monthlyAppointmentsFetcher = async (key: [string, string, string]) => {
 const clientsFetcher = async () => {
   const res = await clientsApi.list({ limit: 1000 });
   if (!res.success) return [];
-  const data = res.data;
+  // A resposta pode vir como array direto ou paginada ({ clients: [...] })
+  const data = res.data as Client[] | { clients?: Client[] } | null | undefined;
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.clients)) return data.clients;
   return [];

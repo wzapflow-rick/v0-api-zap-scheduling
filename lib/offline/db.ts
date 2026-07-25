@@ -203,7 +203,9 @@ export async function saveEntity<T>(
     ...(isLocalId(entity.id) && { localId: entity.id }),
   };
 
-  await db.put(storeName, offlineEntity as OfflineEntity<Appointment | Client | Professional | Service>);
+  // storeName é dinâmico; o idb espera a união por-store, então normalizamos
+  // o entity para um membro concreto da união (cast seguro em runtime).
+  await db.put(storeName, offlineEntity as unknown as OfflineEntity<Appointment>);
 }
 
 // Get entity from store
@@ -465,7 +467,7 @@ export async function bulkSaveEntities<T extends { id: string }>(
       updatedAt: now,
       createdAt: now,
     };
-    await tx.store.put(offlineEntity as OfflineEntity<Appointment | Client | Professional | Service>);
+    await tx.store.put(offlineEntity as unknown as OfflineEntity<Appointment>);
   }
 
   await tx.done;

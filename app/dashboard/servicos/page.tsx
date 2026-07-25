@@ -41,8 +41,9 @@ const servicesFetcher = async (key: [string, string]) => {
   if (!res.success) {
     return [];
   }
-  // API returns { data: { services: [...], pagination: {...} } }
-  const services = res.data?.services || res.data || [];
+  // API returns { data: { services: [...], pagination: {...} } } ou array direto
+  const data = res.data as Service[] | { services?: Service[] } | null | undefined;
+  const services = (data && !Array.isArray(data) ? data.services : data) || [];
   return Array.isArray(services) ? services : [];
 };
 

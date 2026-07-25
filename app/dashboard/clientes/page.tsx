@@ -44,8 +44,9 @@ const clientsFetcher = async (key: [string, string]) => {
   if (!res.success) {
     return [];
   }
-  // API returns { data: { clients: [...], pagination: {...} } }
-  const clients = res.data?.clients || res.data || [];
+  // API returns { data: { clients: [...], pagination: {...} } } ou array direto
+  const data = res.data as Client[] | { clients?: Client[] } | null | undefined;
+  const clients = (data && !Array.isArray(data) ? data.clients : data) || [];
   return Array.isArray(clients) ? clients : [];
 };
 
