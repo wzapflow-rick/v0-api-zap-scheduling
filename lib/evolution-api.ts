@@ -144,28 +144,38 @@ export function normalizeInstanceInfo(
 } | null {
   if (!data) return null;
 
-  // v2: array de instâncias — encontramos a nossa pelo nome
+  // v2: array de instâncias. Dependendo da minor version, cada item vem FLAT
+  // (2.2+: { name, connectionStatus, ownerJid }) ou ANINHADO
+  // (2.0/2.1: { instance: { instanceName, status } }). Achatamos antes de comparar.
   if (Array.isArray(data)) {
-    const found = data.find((item) => {
-      const it = item as { name?: string; instanceName?: string };
-      return it?.name === instanceName || it?.instanceName === instanceName;
-    }) as
-      | {
-          connectionStatus?: 'open' | 'close' | 'connecting';
-          state?: 'open' | 'close' | 'connecting';
-          profileName?: string;
-          profilePicUrl?: string;
-          profilePictureUrl?: string;
-          ownerJid?: string;
-          owner?: string;
-          number?: string;
-        }
-      | undefined;
+    type RawInstance = {
+      name?: string;
+      instanceName?: string;
+      connectionStatus?: 'open' | 'close' | 'connecting';
+      state?: 'open' | 'close' | 'connecting';
+      status?: 'open' | 'close' | 'connecting';
+      profileName?: string;
+      profilePicUrl?: string;
+      profilePictureUrl?: string;
+      ownerJid?: string;
+      owner?: string;
+      number?: string;
+    };
+
+    const flatten = (item: unknown): RawInstance => {
+      const it = item as RawInstance & { instance?: RawInstance };
+      // Quando aninhado, os dados úteis estão em `instance`
+      return it?.instance ? { ...it.instance } : it;
+    };
+
+    const found = data
+      .map(flatten)
+      .find((it) => it?.name === instanceName || it?.instanceName === instanceName);
 
     if (!found) return null;
 
     return {
-      connectionStatus: found.connectionStatus || found.state,
+      connectionStatus: found.connectionStatus || found.state || found.status,
       profileName: found.profileName,
       profilePictureUrl: found.profilePicUrl || found.profilePictureUrl,
       phoneNumber: found.ownerJid || found.owner || found.number,
