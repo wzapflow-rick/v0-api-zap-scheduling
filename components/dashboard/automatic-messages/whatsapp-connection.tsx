@@ -59,9 +59,17 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
   // Verifica o estado real da instância no servidor Evolution.
   // Como a instância é nomeada pelo ID único do estabelecimento, "open" significa
   // que ESTE estabelecimento está de fato conectado (sem herdar instâncias antigas).
-  const checkStatus = useCallback(async () => {
+  // Retorna o estado lido para quem chamou (evita ler `status` desatualizado
+  // por causa do closure do React logo após um await).
+  const checkStatus = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/evolution/status?establishmentId=${establishmentId}`);
+      // cache: 'no-store' é essencial: sem isso o navegador reutilizava a
+      // primeira resposta (desconectado) em todo o polling e o painel nunca
+      // atualizava, mesmo com a Evolution já mostrando "conectado".
+      const response = await fetch(
+        `/api/evolution/status?establishmentId=${establishmentId}`,
+        { cache: 'no-store' }
+      );
       const result = await response.json();
 
       if (result.success && result.data) {
@@ -79,9 +87,14 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
         } else {
           savedConnectedRef.current = false;
         }
+
+        return connected;
       }
+
+      return false;
     } catch {
       // Falha silenciosa — mantém o estado atual
+      return false;
     } finally {
       setLoading(false);
     }
@@ -89,7 +102,10 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
 
   const fetchQRCode = useCallback(async (): Promise<QRCodeData | null> => {
     try {
-      const response = await fetch(`/api/evolution/qrcode?establishmentId=${establishmentId}`);
+      const response = await fetch(
+        `/api/evolution/qrcode?establishmentId=${establishmentId}`,
+        { cache: 'no-store' }
+      );
       const result = await response.json();
       if (result.success && result.data) {
         setQrCode(result.data);
@@ -122,8 +138,10 @@ export function WhatsAppConnection({ establishmentId, onConnectionChange }: What
 
       // 3. Se não veio QR, pode já estar conectado — confere o status
       if (!qr?.base64) {
-        await checkStatus();
-        if (!status?.connected) {
+        const isConnected = await checkStatus();
+        if (isConnected) {
+          toast.success('WhatsApp já está conectado!');
+        } else {
           toast.message('Aguarde um instante e tente atualizar o QR Code.');
         }
       } else {

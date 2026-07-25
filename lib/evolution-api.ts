@@ -47,6 +47,10 @@ async function evolutionFetch<T>(
     
     const response = await fetch(url, {
       ...options,
+      // O estado da instância muda a cada segundo (QR lido, conexão aberta).
+      // Sem no-store o Next poderia reaproveitar uma resposta antiga e o painel
+      // ficaria travado em "Desconectado" mesmo com o WhatsApp já conectado.
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
         'apikey': apiKey,
@@ -122,7 +126,7 @@ export async function getInstanceStatus(instanceName: string) {
 // Tipamos como `unknown` e normalizamos em quem consome (rota de status).
 export async function getInstanceInfo(instanceName: string) {
   return evolutionFetch<unknown>(
-    `/instance/fetchInstances?instanceName=${instanceName}`,
+    `/instance/fetchInstances?instanceName=${encodeURIComponent(instanceName)}`,
     {
       method: 'GET',
     }

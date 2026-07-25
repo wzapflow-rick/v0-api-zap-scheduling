@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Check, X, Eye, EyeOff, Mail, Lock, User, Phone, Building2, ArrowRight, Scissors, Sparkles, Dumbbell, Stethoscope, Store } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { getPasswordRequirements, getPasswordStrength, isPasswordValid, passwordSchema } from '@/lib/validators';
+import { getPasswordRequirements, getPasswordStrength, isPasswordValid, passwordSchema, phoneSchema, formatPhoneBR, normalizePhone, validatePhoneBR } from '@/lib/validators';
 import { cn } from '@/lib/utils';
 import { analytics, AnalyticsEvent } from '@/lib/analytics';
 import type { BusinessTypeId } from '@/types';
@@ -28,7 +28,8 @@ const businessTypeOptions: { id: BusinessTypeId; label: string; icon: React.Elem
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
-  phone: z.string().min(10, 'Telefone inválido'),
+  // Valida DDD, quantidade de dígitos e o 9 do celular (ver lib/validators)
+  phone: phoneSchema,
   establishmentName: z.string().min(2, 'Nome do estabelecimento é obrigatório'),
   password: passwordSchema,
   confirmPassword: z.string(),
@@ -64,6 +65,12 @@ export default function RegisterPage() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
+
+  // Telefone: registramos separado para poder aplicar a máscara no onChange
+  const phoneRegister = register('phone');
+  const phoneDigits = normalizePhone(watch('phone') || '');
+  const phoneCheck = validatePhoneBR(phoneDigits);
+  const phoneIsValid = phoneCheck.valid;
 
   const passwordValue = watch('password') || '';
   const requirements = getPasswordRequirements(passwordValue);
@@ -220,15 +227,29 @@ export default function RegisterPage() {
           </p>
         )}
 
-        {/* Phone Field */}
+        {/* Phone Field — máscara + validação de DDD/dígitos */}
         <InputWrapper name="phone" label="Telefone/WhatsApp" icon={Phone}>
           <Input
             id="phone"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            maxLength={15}
             placeholder="(11) 99999-9999"
-            {...register('phone')}
+            {...phoneRegister}
+            onChange={(e) => {
+              // Formata enquanto digita para o usuário conferir o número
+              e.target.value = formatPhoneBR(e.target.value);
+              phoneRegister.onChange(e);
+            }}
             disabled={isLoading || isLocked}
             onFocus={() => setFocusedField('phone')}
-            onBlur={() => setFocusedField(null)}
+            onBlur={(e) => {
+              setFocusedField(null);
+              phoneRegister.onBlur(e);
+            }}
+            aria-invalid={!!errors.phone}
+            aria-describedby="phone-hint"
             className={cn(
               'h-12 pl-11 bg-muted/50 border-border transition-all',
               'focus:border-emerald-500 focus:ring-emerald-500/20 focus:bg-background',
@@ -236,11 +257,20 @@ export default function RegisterPage() {
             )}
           />
         </InputWrapper>
-        {errors.phone && (
-          <p className="text-sm text-destructive -mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
-            {errors.phone.message}
-          </p>
-        )}
+        <p
+          id="phone-hint"
+          className={cn(
+            'text-sm -mt-3 animate-in fade-in slide-in-from-top-1 duration-200',
+            errors.phone || (phoneDigits.length > 0 && !phoneIsValid)
+              ? 'text-destructive'
+              : 'text-muted-foreground'
+          )}
+        >
+          {errors.phone?.message ||
+            (phoneDigits.length > 0 && !phoneIsValid
+              ? phoneCheck.error
+              : 'Informe DDD + número. Usaremos este WhatsApp para recuperar sua senha.')}
+        </p>
 
         {/* Establishment Field */}
         <InputWrapper name="establishmentName" label="Nome do estabelecimento" icon={Building2}>
@@ -431,7 +461,7 @@ export default function RegisterPage() {
             'shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40',
             'group'
           )}
-          disabled={isLoading || isLocked || !passwordIsValid}
+          disabled={isLoading || isLocked || !passwordIsValid || !phoneIsValid}
         >
           {isLoading ? (
             <>
