@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createInstance, deleteInstance, logoutInstance, getInstanceInfo, getInstanceName } from '@/lib/evolution-api';
+import { createInstance, deleteInstance, logoutInstance, getInstanceInfo, getInstanceName, normalizeInstanceInfo } from '@/lib/evolution-api';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { 
   verifyAuth, 
@@ -47,16 +47,24 @@ export async function POST(request: Request) {
 
     const instanceName = getInstanceName(establishmentId);
     
-    // 4. Try to get existing instance first
+    // 4. Verifica se a instância JÁ existe no servidor Evolution.
+    // ATENÇÃO: na Evolution v2, fetchInstances retorna um ARRAY — e um array
+    // VAZIO (instância inexistente) é truthy em JS. Por isso não podemos checar
+    // apenas `existingInstance.data`; normalizamos a resposta e só consideramos
+    // existente quando encontramos de fato a instância pelo nome. Caso contrário,
+    // a criação era pulada e o /connect falhava com "não foi possível".
     const existingInstance = await getInstanceInfo(instanceName);
-    
-    if (existingInstance.success && existingInstance.data) {
+    const existingInfo = existingInstance.success
+      ? normalizeInstanceInfo(existingInstance.data, instanceName)
+      : null;
+
+    if (existingInfo) {
       return NextResponse.json({
         success: true,
         data: {
           instanceName,
           exists: true,
-          ...existingInstance.data,
+          ...existingInfo,
         },
       }, {
         headers: {
@@ -65,7 +73,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 5. Create new instance
+    // 5. Create new instance (instância ainda não existe)
     const result = await createInstance(instanceName);
 
     if (!result.success) {
