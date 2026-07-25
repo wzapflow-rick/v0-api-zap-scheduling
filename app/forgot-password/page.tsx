@@ -115,8 +115,10 @@ export default function ForgotPasswordPage() {
     resolver: zodResolver(newPasswordSchema),
   });
 
-  const phoneRegister = phoneForm.register('phone');
-  const phoneDigits = normalizePhone(phoneForm.watch('phone') || '');
+  // Input controlado: a máscara vem do estado do form via setValue. Mutar
+  // e.target.value fazia o React descartar os dígitos após o primeiro.
+  const phoneValue = phoneForm.watch('phone') || '';
+  const phoneDigits = normalizePhone(phoneValue);
   const phoneCheck = validatePhoneBR(phoneDigits);
   const phoneIsValid = phoneCheck.valid;
 
@@ -311,17 +313,15 @@ export default function ForgotPasswordPage() {
                   autoComplete="tel"
                   maxLength={15}
                   placeholder="(11) 99999-9999"
-                  {...phoneRegister}
+                  value={formatPhoneBR(phoneValue)}
                   onChange={(e) => {
-                    e.target.value = formatPhoneBR(e.target.value);
-                    phoneRegister.onChange(e);
+                    phoneForm.setValue('phone', formatPhoneBR(e.target.value), {
+                      shouldValidate: true,
+                    });
                   }}
                   disabled={isLoading || isLocked}
                   onFocus={() => setFocusedField('phone')}
-                  onBlur={(e) => {
-                    setFocusedField(null);
-                    phoneRegister.onBlur(e);
-                  }}
+                  onBlur={() => setFocusedField(null)}
                   aria-invalid={!!phoneForm.formState.errors.phone}
                   aria-describedby="phone-hint"
                   className={inputClass(!!phoneForm.formState.errors.phone)}

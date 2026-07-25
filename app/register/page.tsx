@@ -61,14 +61,17 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 
-  // Telefone: registramos separado para poder aplicar a máscara no onChange
-  const phoneRegister = register('phone');
-  const phoneDigits = normalizePhone(watch('phone') || '');
+  // Telefone: o valor exibido é sempre derivado do estado do form (input
+  // controlado), então a máscara é aplicada via setValue — mutar
+  // e.target.value no onChange fazia o React descartar os dígitos seguintes.
+  const phoneValue = watch('phone') || '';
+  const phoneDigits = normalizePhone(phoneValue);
   const phoneCheck = validatePhoneBR(phoneDigits);
   const phoneIsValid = phoneCheck.valid;
 
@@ -236,18 +239,16 @@ export default function RegisterPage() {
             autoComplete="tel"
             maxLength={15}
             placeholder="(11) 99999-9999"
-            {...phoneRegister}
+            value={formatPhoneBR(phoneValue)}
             onChange={(e) => {
               // Formata enquanto digita para o usuário conferir o número
-              e.target.value = formatPhoneBR(e.target.value);
-              phoneRegister.onChange(e);
+              setValue('phone', formatPhoneBR(e.target.value), {
+                shouldValidate: true,
+              });
             }}
             disabled={isLoading || isLocked}
             onFocus={() => setFocusedField('phone')}
-            onBlur={(e) => {
-              setFocusedField(null);
-              phoneRegister.onBlur(e);
-            }}
+            onBlur={() => setFocusedField(null)}
             aria-invalid={!!errors.phone}
             aria-describedby="phone-hint"
             className={cn(
