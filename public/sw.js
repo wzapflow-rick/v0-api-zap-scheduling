@@ -1,8 +1,11 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'zapflow-v2';
-const STATIC_CACHE_NAME = 'zapflow-static-v2';
-const API_CACHE_NAME = 'zapflow-api-v2';
+// Ao mudar estes nomes, o evento activate apaga os caches das versoes
+// anteriores. A v3 e necessaria para descartar os chunks /_next antigos que a
+// v2 havia guardado e que provocavam erros de hidratacao.
+const CACHE_NAME = 'zapflow-v3';
+const STATIC_CACHE_NAME = 'zapflow-static-v3';
+const API_CACHE_NAME = 'zapflow-api-v3';
 
 // Static assets to cache
 const STATIC_ASSETS = [
@@ -76,6 +79,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Nunca interceptar requisicoes de outra origem.
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // NAO cachear os assets internos do Next nem o HMR do modo de desenvolvimento.
+  //
+  // Motivo (bug real observado): o handleStaticRequest e cache-first. Ao servir
+  // um chunk /_next/static antigo junto com um HTML novo, o React encontra uma
+  // arvore diferente da renderizada no servidor, descarta a hidratacao e
+  // remonta o DOM. Na pratica o usuario perdia o foco do input a cada tecla
+  // digitada, porque o <input> era destruido e recriado.
+  //
+  // Estes recursos ja possuem hash no nome e cabecalhos de cache proprios,
+  // portanto o Service Worker nao deve gerencia-los.
+  if (
+    url.pathname.startsWith('/_next/') ||
+    url.pathname.startsWith('/__nextjs') ||
+    url.pathname.includes('hot-update')
+  ) {
+    return;
+  }
+
   // Handle API requests
   if (url.pathname.startsWith('/api/proxy/')) {
     event.respondWith(handleApiRequest(event.request));
@@ -137,13 +163,17 @@ async function handleApiRequest(request) {
 async function handleNavigationRequest(request) {
   try {
     const networkResponse = await fetch(request);
-    
-    // Cache successful navigation responses
-    if (networkResponse.ok) {
+
+    // Guardamos o HTML apenas das rotas listadas em STATIC_ASSETS (o fallback
+    // offline). Cachear qualquer navegacao guardava tambem paginas com dados de
+    // sessao e o HTML servido depois divergia do JS atual, causando erro de
+    // hidratacao e remontagem do DOM.
+    const url = new URL(request.url);
+    if (networkResponse.ok && STATIC_ASSETS.includes(url.pathname)) {
       const cache = await caches.open(STATIC_CACHE_NAME);
       cache.put(request, networkResponse.clone());
     }
-    
+
     return networkResponse;
   } catch {
     // Try to serve from cache
