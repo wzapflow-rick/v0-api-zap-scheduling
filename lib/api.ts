@@ -378,9 +378,12 @@ export const automaticMessagesApi = {
     }>('/automatic-messages/whatsapp'),
 
   // POST /api/automatic-messages/whatsapp - Update WhatsApp connection (webhook)
+  // Envia SEMPRE o instanceName para que o backend salve exatamente a instância
+  // que o front conectou na Evolution e envie as mensagens por ela.
   updateWhatsAppConnection: (data: { 
     connected: boolean; 
     phone?: string | null;
+    instanceName?: string;
   }) =>
     apiFetch<{ success: boolean }>('/automatic-messages/whatsapp', {
       method: 'POST',
