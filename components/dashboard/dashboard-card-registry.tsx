@@ -53,43 +53,56 @@ function StatCard({
   index?: number;
 }) {
   return (
+    // h-full em toda a cadeia (motion > Card > CardContent) faz todos os cards
+    // da grid terem exatamente a mesma altura, independente de ter subtítulo,
+    // trend ou títulos que quebram em duas linhas.
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
+      className="h-full"
     >
       <Card
         className={cn(
-          'relative overflow-hidden transition-all duration-300 hover:shadow-lg',
+          'relative h-full overflow-hidden transition-all duration-300 hover:shadow-lg',
           highlight
             ? 'bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border-primary/30'
             : 'bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30'
         )}
       >
-        <CardContent className="p-5">
+        <CardContent className="flex h-full flex-col p-5">
           <div className="flex items-start gap-4">
-            <div className={cn('flex items-center justify-center w-12 h-12 rounded-xl', iconBg)}>
-              <Icon className={cn('w-6 h-6', iconColor)} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
-              <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
-              {(subtitle || trend) && (
-                <div className="flex items-center gap-2 mt-1">
-                  {trend && (
-                    <span
-                      className={cn(
-                        'text-xs font-medium',
-                        trend.positive ? 'text-emerald-500' : 'text-red-500'
-                      )}
-                    >
-                      {trend.positive ? '+' : ''}
-                      {trend.value.toFixed(1)}%
-                    </span>
-                  )}
-                  {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
-                </div>
+            <div
+              className={cn(
+                'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
+                iconBg
               )}
+            >
+              <Icon className={cn('h-6 w-6', iconColor)} />
+            </div>
+            <div className="min-w-0 flex-1">
+              {/* min-h fixo reserva espaço para títulos de 1 ou 2 linhas,
+                  mantendo os valores alinhados entre os cards */}
+              <p className="mb-1 min-h-10 text-sm font-medium leading-5 text-muted-foreground">
+                {title}
+              </p>
+              <p className="text-2xl font-bold tracking-tight text-foreground">{value}</p>
+              {/* Linha de rodapé sempre presente: sem ela, cards sem subtítulo
+                  ficavam mais baixos que os demais */}
+              <div className="mt-1 flex min-h-4 items-center gap-2">
+                {trend && (
+                  <span
+                    className={cn(
+                      'text-xs font-medium',
+                      trend.positive ? 'text-emerald-500' : 'text-red-500'
+                    )}
+                  >
+                    {trend.positive ? '+' : ''}
+                    {trend.value.toFixed(1)}%
+                  </span>
+                )}
+                {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
+              </div>
             </div>
           </div>
         </CardContent>

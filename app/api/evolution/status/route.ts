@@ -10,6 +10,10 @@ import {
   validateEstablishmentId,
 } from '@/lib/api-auth';
 
+// O status é volátil: nunca deve ser cacheado nem pré-renderizado.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   try {
     // 1. Verify authentication
@@ -73,6 +77,9 @@ export async function GET(request: Request) {
     }, {
       headers: {
         'X-RateLimit-Remaining': String(rateLimit.remaining),
+        // Impede o navegador de servir a primeira resposta ("close") do cache
+        // durante o polling — era isso que travava o painel em "Desconectado".
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
   } catch (error) {

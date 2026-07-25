@@ -10,6 +10,10 @@ import {
   validateEstablishmentId,
 } from '@/lib/api-auth';
 
+// O QR Code expira em segundos: nunca deve ser cacheado.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   try {
     // 1. Verify authentication
@@ -79,6 +83,7 @@ export async function GET(request: Request) {
     }, {
       headers: {
         'X-RateLimit-Remaining': String(rateLimit.remaining),
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
   } catch (error) {
