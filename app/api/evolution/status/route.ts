@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getInstanceStatus, getInstanceInfo, getInstanceName } from '@/lib/evolution-api';
+import { getInstanceStatus, getInstanceInfo, getInstanceName, normalizeInstanceInfo } from '@/lib/evolution-api';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { 
   verifyAuth, 
@@ -39,60 +39,36 @@ export async function GET(request: Request) {
     }
 
     const instanceName = getInstanceName(establishmentId);
-    
-    // 4. Get connection state
-    const statusResult = await getInstanceStatus(instanceName);
-    
-    if (!statusResult.success) {
-      // Instance doesn't exist or error - return disconnected state
-      return NextResponse.json({
-        success: true,
-        data: {
-          instanceName,
-          state: 'close',
-          connected: false,
-          profileName: null,
-          profilePictureUrl: null,
-        },
-      }, {
-        headers: {
-          'X-RateLimit-Remaining': String(rateLimit.remaining),
-        },
-      });
-    }
 
-    // A Evolution pode retornar o estado aninhado em { instance: { state } }
-    // ou direto na raiz { state }, dependendo da versão. Lemos ambos.
-    const instanceData = statusResult.data as { instance?: { state?: string }; state?: string };
-    const state = instanceData?.instance?.state || instanceData?.state || 'close';
+    // 4. Consultamos os DOIS endpoints em paralelo e combinamos os sinais.
+    // O connectionState às vezes fica defasado logo após a leitura do QR,
+    // enquanto o fetchInstances (connectionStatus) já reflete "open" — e vice-versa.
+    // Considerar ambos evita o painel travar em "Desconectado".
+    const [statusResult, infoResult] = await Promise.all([
+      getInstanceStatus(instanceName),
+      getInstanceInfo(instanceName),
+    ]);
 
-    // 5. If connected, get profile info
-    let profileInfo = null;
-    if (state === 'open') {
-      const infoResult = await getInstanceInfo(instanceName);
-      if (infoResult.success && infoResult.data) {
-        const infoData = infoResult.data as { 
-          instance?: { 
-            profileName?: string; 
-            profilePictureUrl?: string; 
-            owner?: string;
-          };
-        };
-        profileInfo = {
-          profileName: infoData.instance?.profileName,
-          profilePictureUrl: infoData.instance?.profilePictureUrl,
-          phoneNumber: infoData.instance?.owner,
-        };
-      }
-    }
+    // Estado vindo do connectionState (v1: raiz, v2: aninhado em instance)
+    const instanceData = statusResult.data as { instance?: { state?: string }; state?: string } | undefined;
+    const connectionState = instanceData?.instance?.state || instanceData?.state;
+
+    // Estado + perfil vindos do fetchInstances (normalizado entre v1 e v2)
+    const info = infoResult.success ? normalizeInstanceInfo(infoResult.data, instanceName) : null;
+
+    // Conectado se QUALQUER um dos sinais indicar "open"
+    const connected = connectionState === 'open' || info?.connectionStatus === 'open';
+    const state = connected ? 'open' : connectionState || info?.connectionStatus || 'close';
 
     return NextResponse.json({
       success: true,
       data: {
         instanceName,
         state,
-        connected: state === 'open',
-        ...profileInfo,
+        connected,
+        profileName: connected ? info?.profileName ?? null : null,
+        profilePictureUrl: connected ? info?.profilePictureUrl ?? null : null,
+        phoneNumber: connected ? info?.phoneNumber ?? null : null,
       },
     }, {
       headers: {
